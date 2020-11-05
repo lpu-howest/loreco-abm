@@ -1,5 +1,5 @@
-include("cockpit/utilities/types.jl")
+include("utilities/types.jl")
 using Main.Types
 
-include("cockpit/production/lifecycle.jl")
+include("production/lifecycle.jl")
 using Main.Entities
