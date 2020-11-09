@@ -1,10 +1,10 @@
 module Production
 
-import "lifecycle.jl"
-import "entities.jl"
-import "blueprint.jl"
+include("lifecycle.jl")
+# include "entities.jl"
+# include "blueprint.jl"
 
-export Lifecycle, SingleUse, Restorable
+export Lifecycle, SingleUse, Restorable, health, use!, damage!, restore!
 export Identity, Entity, Product, Producer, Enhancer
 
 end

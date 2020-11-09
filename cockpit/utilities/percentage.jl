@@ -10,7 +10,7 @@ Base.convert(::Type{Percentage}, x::Percentage) = x
 
 Base.promote_rule(::Type{T}, ::Type{Percentage}) where T <: Real = Percentage
 
-import Base: +, -, <, >, <=, >=, ==
+import Base: +, -, <, >, <=, >=, ==, *, /
 
 +(x::Percentage, y::Percentage) = Percentage(x.value + y.value)
 -(x::Percentage) = Percentage(-x.value)

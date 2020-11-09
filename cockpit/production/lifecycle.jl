@@ -1,6 +1,5 @@
 using Main.Types
 
-
 abstract type Lifecycle end
 
 mutable struct SingleUse <: Lifecycle
@@ -8,8 +7,13 @@ mutable struct SingleUse <: Lifecycle
     SingleUse(used=false) = new(used)
 end
 
-function damage!(lifecycle::SingleUse)
+function use!(lifecycle::SingleUse)
     lifecycle.used = true
+    return lifecycle
+end
+
+function damage!(lifecycle::SingleUse, damage::Real = 1)
+    use(lifecycle)
     return lifecycle
 end
 
@@ -17,7 +21,7 @@ function restore!(lifecycle::SingleUse, damage::Real = 0)
     return lifecycle
 end
 
-function health(lifecycle::SingleUse, damage::Real = 0)
+function health(lifecycle::SingleUse)
     return lifecycle.used ? Health(0) : Health(1)
 end
 
@@ -30,6 +34,7 @@ Indicates a lifecycle with restorability, i.e. the entity can recover from damag
 - `health`: The current health
 - `damage_thresholds`: These are tuples, ordered by percentage, holding damage multipliers. The actual inflicted damage is multiplied with the appropriate multiplier before applied to the current health.
 - `restoration_thresholds`: These are tuples, ordered by percentage, holding restoration multipliers. The actual amount of damage which is restored is first multiplied with the appropriate multiplier before being applied to the current health.
+- `wear`: damage which occurs from each use.
 
 # Example
 `
@@ -46,22 +51,68 @@ struct Restorable <: Lifecycle
     health::Health
     damage_thresholds::Vector{Tuple{Percentage, Float64}}
     restoration_thresholds::Vector{Tuple{Percentage, Float64}}
-    Restorable(health, damage_thresholds, restoration_thresholds) = new(health, sort(damage_thresholds), sort(restoration_thresholds))
+    wear::Float64
+    Restorable(
+        health=1;
+        damage_thresholds=[(1, 0.01)],
+        restoration_thresholds=[(1, 0.01)],
+        wear=0) = new(health,
+                    sort(damage_thresholds),
+                    sort(restoration_thresholds),
+                    wear)
 end
 
+"""
+Returns the current health.
+"""
 function health(lifecycle::Lifecycle)
     return lifecycle.health
 end
 
-function damage!(lifecycle::Lifecycle, damage::Real = 0.01)
+@enum Direction up down
+
+function change_health(lifecycle::Lifecycle, damage::Real, direction::Direction)
+    if direction == up
+        thresholds = lifecycle.restoration_thresholds
+    else
+        thresholds = lifecycle.damage_thresholds
+    end
+
     multiplier = 0
 
-    for threshold in lifecycle.damage_thresholds
+    for threshold in thresholds
         if lifecycle.health <= threshold[1]
             multiplier = threshold[2]
-        else
-            
+            break
+        end
+    end
+
+    real_change = damage * multiplier
+
+    if direction == up
+        lifecycle.health.current += real_change
+    else
+        lifecycle.health.current -= real_change
+    end
+
+    return lifecycle
 end
 
+function use!(lifecycle::Restorable)
+    damage!(lifecycle, lifecycle.wear)
+end
+
+"""
+Applies damage according to the damage thresholds.
+"""
+function damage!(lifecycle::Lifecycle, damage::Real = 0.01)
+    change_health(lifecycle, damage, down)
+end
+
+
+"""
+Restores damage according to the restoration thresholds.
+"""
 function restore!(lifecycle::Lifecycle, damage::Real = 0.01)
+    change_health(lifecycle, damage, up)
 end
