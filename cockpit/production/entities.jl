@@ -1,5 +1,3 @@
-module Entities
-
 using Main.Types
 using UUIDs
 
@@ -21,11 +19,10 @@ end
 
 struct Tool <: Product
     id::Identity
-    lifecycle::Mechanical
+    lifecycle::Restorable
 end
 
-struct MechanicalProducer <: Producer
+struct Producer <: Producer
     id::Identity
-    lifecycle::Mechanical
-
+    lifecycle::Restorable
 end
