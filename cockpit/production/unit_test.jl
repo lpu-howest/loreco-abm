@@ -27,5 +27,5 @@ end
     @test health(use!(r)) == 0.6
     @test health(restore!(r, 0.1)) == 0.7
     @test health(restore!(r, 0.1)) == 0.9
-    @test health(damage!(r, 0.5)) == 0.6 # TODO change! Damage must increase as soon as health falls to 0.8
+    @test health(damage!(r, 0.3)) == 0.5
 end

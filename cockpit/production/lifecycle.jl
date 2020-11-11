@@ -55,21 +55,23 @@ struct Restorable <: Lifecycle
     wear::Float64
     Restorable(
         health=1;
-        damage_thresholds=[(1, 0.01)],
-        restoration_thresholds=[(1, 0.01)],
-        wear=0) = new(health,
+        damage_thresholds=[(1, 1)],
+        restoration_thresholds=[(1, 1)],
+        wear=0) = new(Health(health),
                     complete(damage_thresholds),
                     complete(restoration_thresholds),
                     wear)
 end
 
 """
-Sort the thresholds and make sure there is a threshold where the percentage == 100%. If the 100% threshold is added, use the same multiplier as the highest threshold.
+Sort the thresholds and make sure there is a threshold where the percentage == 100%. If the 100% threshold is added, use the same multiplier as the highest threshold. If no threshold is present, add (1, 1).
 """
 function complete(thresholds::Vector)
     thresholds = sort(thresholds)
 
-    if thresholds[end][1] != 1
+    if length(thresholds) == 0
+        push!(thresholds, (1, 1))
+    elseif thresholds[end][1] != 1
         push!(thresholds, (1, thresholds[end][2]))
     end
 
@@ -86,63 +88,62 @@ end
 @enum Direction up down
 
 function change_health(lifecycle::Lifecycle, change::Real, direction::Direction)
-    if change != nothing
-        if direction == up
-            thresholds = lifecycle.restoration_thresholds
-        else
-            thresholds = lifecycle.damage_thresholds
-        end
-
-        # It's easy when there is only the 100% threshold
-        if length(thresholds) == 1
-            real_change = thresholds[1][2] * change
-            surplus_change = nothing
-        else
-            multiplier = nothing
-            max_change = nothing
-            index = length(thresholds) - 1
-
-            while index > 0 && multiplier == nothing
-                if lifecycle.health > thresholds[index][1]
-                    multiplier = thresholds[index + 1][2]
-
-                    if direction == up && index + 1 < length(thresholds)
-                        # No surplus change can happen above 100%
-                        max_change = thresholds[index + 1][1] - lifecycle.health
-                    elseif direction == down && index > 1
-                        # No surplus change can happen below 0%
-                        max_change = lifecycle.health - thresholds[index][1]
-                    end
-                end
-
-                index -= 1
-            end
-
-            if multiplier == nothing
-                # Health is below lowest threshold
-                real_change = thresholds[1][2] * change
-            else
-                real_change = change * multiplier
-            end
-
-            if max_change != nothing && real_change > max_change
-                surplus_change = (real_change - max_change) / multiplier
-                real_change = max_change
-            else
-                surplus_change = nothing
-            end
-        end
-
-        if direction == up
-            lifecycle.health.current += real_change
-        else
-            lifecycle.health.current -= real_change
-        end
-
-        return change_health(lifecycle, surplus_change, direction)
+    if direction == up
+        thresholds = lifecycle.restoration_thresholds
     else
-        return lifecycle
+        thresholds = lifecycle.damage_thresholds
     end
+
+    # It's easy when there is only the 100% threshold
+    if length(thresholds) == 1
+        real_change = thresholds[1][2] * change
+        surplus_change = nothing
+    else
+        multiplier = nothing
+        max_change = nothing
+        index = length(thresholds) - 1
+
+        while index > 0 && multiplier == nothing
+            if lifecycle.health > thresholds[index][1]
+                multiplier = thresholds[index + 1][2]
+
+                if direction == up && index + 1 < length(thresholds)
+                    # No surplus change can happen above 100%
+                    max_change = thresholds[index + 1][1] - lifecycle.health.current
+                elseif direction == down
+                    max_change = lifecycle.health.current - thresholds[index][1]
+                end
+            end
+
+            index -= 1
+        end
+
+        if multiplier == nothing
+            # Health is below lowest threshold
+            real_change = thresholds[1][2] * change
+        else
+            real_change = change * multiplier
+        end
+
+        if max_change != nothing && real_change > max_change
+            surplus_change = (real_change - max_change) / multiplier
+            real_change = max_change
+        else
+            surplus_change = nothing
+        end
+    end
+
+    if direction == up
+        lifecycle.health.current += real_change
+    else
+        lifecycle.health.current -= real_change
+    end
+
+    return change_health(lifecycle, surplus_change, direction)
+end
+
+function change_health(lifecycle::Lifecycle, change::Nothing, direction::Direction)
+    return lifecycle
 end
 
 function use!(lifecycle::Restorable)
