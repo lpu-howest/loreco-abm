@@ -4,7 +4,7 @@ export Percentage, Health
 
 struct Percentage <: Real
     value::Float64
-    Percentage(x) = x < 0 ? new(0) : x > 1 ? new(1) : new(x)
+    Percentage(x, precision::Integer=6) = x < 0 ? new(0) : x > 1 ? new(1) : new(round(x, digits=precision))
 end
 
 Base.show(io::IO, x::Percentage) = print(io, "Percentage($(x.value * 100)%)")
@@ -19,6 +19,8 @@ mutable struct Health
     current::Percentage
     Health(current=1) = new(current)
 end
+
+Base.round(x::Health; digits::Integer = 0, base = 10) = Health(round(value(x), digits = digits, base = base))
 
 value(x::Percentage) = x.value
 value(x::Health) = value(x.current)

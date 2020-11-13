@@ -56,3 +56,15 @@ end
 
     @test Health(0.1) + Percentage(0.2) == 0.3
 end
+
+@testset "Mixed" begin
+    p = Percentage(0.1)
+    h = Health(0.2)
+
+    @test p + h == h + p == 0.3
+    @test h - p == 0.1
+    @test p - h == 0
+    @test h * p == p * h == 0.02
+    @test p / h == 0.5
+    @test h / p == 1
+end
