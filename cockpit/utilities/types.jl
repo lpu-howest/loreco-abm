@@ -1,6 +1,6 @@
 module Types
 
-export Percentage, Health
+export Percentage, Health, value
 
 struct Percentage <: Real
     value::Float64

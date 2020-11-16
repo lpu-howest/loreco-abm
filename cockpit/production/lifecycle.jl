@@ -1,5 +1,7 @@
 using Main.Types
 
+@enum Direction up down
+
 abstract type Lifecycle end
 
 mutable struct SingleUse <: Lifecycle
@@ -33,9 +35,9 @@ Thresholds determine the multiplier for health at and below the threshold.
 
 # Fields
 - `health`: The current health
-- `damage_thresholds`: These are tuples, ordered by percentage, holding damage multipliers. The actual inflicted damage is multiplied with the appropriate multiplier before applied to the current health.
-- `restoration_thresholds`: These are tuples, ordered by percentage, holding restoration multipliers. The actual amount of damage which is restored is first multiplied with the appropriate multiplier before being applied to the current health.
-- `wear`: damage which occurs from each use.
+- `damage_thresholds`: These are tuples, ordered by percentage, holding damage multipliers. The applied multiplier corresponds with the lowest threshold which is higher than the health of the lifecycle.
+- `restoration_thresholds`: These are tuples, ordered by percentage, holding restoration multipliers. The applied multiplier corresponds with the lowest threshold which is higher than the health of the lifecycle.
+- `wear`: damage which occurs from each use. Succeptable to multipliers.
 
 # Example
 `
@@ -46,7 +48,7 @@ Restorable
 `
 When 1 damage is done it results in 0.2 damage actually being applied. Should health drop to 70% or less, then 0.5 damage would be applied. This indicates the robustness at various levels of damage.
 
-When i damage is restored it results in 0.3 damage actually being restored. Should health drop to 40% or below no damage is being restored. This indicates restorability. The last tier indicates a level of damage beyond which no restoration is possible anymore.
+When 1 damage is restored it results in 0.3 damage actually being restored. Should health drop to 40% or below no damage is being restored. This indicates restorability. The last tier indicates a level of damage beyond which no restoration is possible anymore.
 """
 struct Restorable <: Lifecycle
     health::Health
@@ -58,15 +60,15 @@ struct Restorable <: Lifecycle
         damage_thresholds=[(1, 1)],
         restoration_thresholds=[(1, 1)],
         wear=0) = new(Health(health),
-                    complete(damage_thresholds),
-                    complete(restoration_thresholds),
+                    complete(damage_thresholds, down),
+                    complete(restoration_thresholds, up),
                     wear)
 end
 
 """
 Sort the thresholds and make sure there is a threshold where the percentage == 100%. If the 100% threshold is added, use the same multiplier as the highest threshold. If no threshold is present, add (1, 1).
 """
-function complete(thresholds::Vector)
+function complete(thresholds::Vector, direction::Direction)
     thresholds = sort(thresholds)
 
     if length(thresholds) == 0
@@ -85,8 +87,6 @@ function health(lifecycle::Lifecycle)
     return lifecycle.health
 end
 
-@enum Direction up down
-
 function change_health(lifecycle::Lifecycle, change::Real, direction::Direction)
     if direction == up
         thresholds = lifecycle.restoration_thresholds
@@ -98,24 +98,33 @@ function change_health(lifecycle::Lifecycle, change::Real, direction::Direction)
     if length(thresholds) == 1
         real_change = thresholds[1][2] * change
         surplus_change = nothing
+    elseif (health(lifecycle) == 1 && direction == up) ||
+        (health(lifecycle) == 0 && direction == down)
+        return lifecycle
     else
         multiplier = nothing
         max_change = nothing
-        index = length(thresholds) - 1
+        index = 1
 
-        while index > 0 && multiplier == nothing
-            if lifecycle.health > thresholds[index][1]
-                multiplier = thresholds[index + 1][2]
+        while index <= length(thresholds) && multiplier == nothing
+            if health(lifecycle) < thresholds[index][1]
+                multiplier = thresholds[index][2]
 
-                if direction == up && index + 1 < length(thresholds)
-                    # No surplus change can happen above 100%
-                    max_change = thresholds[index + 1][1] - lifecycle.health.current
-                elseif direction == down
-                    max_change = lifecycle.health.current - thresholds[index][1]
+                if direction == up && index != length(thresholds)
+                    max_change = thresholds[index][1] - value(health(lifecycle))
+                elseif direction == down && index != 1
+                    if health(lifecycle) != thresholds[index - 1][1]
+                        max_change = value(health(lifecycle)) - thresholds[index - 1][1]
+                    else
+                        multiplier = thresholds[index - 1][2]
+                        if index != 2
+                            max_change = value(health(lifecycle)) - thresholds[index - 2][1]
+                        end
+                    end
                 end
             end
 
-            index -= 1
+            index += 1
         end
 
         if multiplier == nothing
