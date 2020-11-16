@@ -6,11 +6,11 @@ using Main.Production
 
 @testset "SingleUse" begin
     @test SingleUse().used == false
-    @test use(SingleUse()).used == true
+    @test use!(SingleUse()).used == true
     @test health(SingleUse()) == 1
-    @test health(use(SingleUse())) == 0
-    @test health(damage!(SingleUse())) == 0
-    @test health(restore!(damage!(SingleUse()))) == 0
+    @test health(use!(SingleUse())) == 0
+    @test health(damage!(SingleUse(), 0.01)) == 0
+    @test health(restore!(damage!(SingleUse(), 0.01))) == 0
 end
 
 @testset "Restorable" begin

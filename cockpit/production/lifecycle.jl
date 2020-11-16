@@ -15,7 +15,7 @@ function use!(lifecycle::SingleUse)
 end
 
 function damage!(lifecycle::SingleUse, damage::Real = 1)
-    use(lifecycle)
+    use!(lifecycle)
     return lifecycle
 end
 
