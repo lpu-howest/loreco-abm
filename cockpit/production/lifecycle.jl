@@ -66,6 +66,8 @@ struct Restorable <: Lifecycle
 end
 
 """
+    complete
+
 Sort the thresholds and make sure there is a threshold where the percentage == 100%. If the 100% threshold is added, use the same multiplier as the highest threshold. If no threshold is present, add (1, 1).
 """
 function complete(thresholds::Vector, direction::Direction)
@@ -81,6 +83,8 @@ function complete(thresholds::Vector, direction::Direction)
 end
 
 """
+    health
+    
 Returns the current health.
 """
 function health(lifecycle::Lifecycle)
