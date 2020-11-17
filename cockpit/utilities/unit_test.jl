@@ -1,5 +1,3 @@
-include("types.jl")
-
 using Test
 using Main.Types
 
