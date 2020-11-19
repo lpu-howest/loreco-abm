@@ -85,43 +85,57 @@ Base.show(io::IO, e::Consumable) = print(io, "Consumable(Name: $(e.name))")
 struct Tool <: Entity
     id::Identity
     lifecycle::Restorable
-    maintenance_res::Dict{BluePrint,Int64}
-    maintenance::Float64
-    Tool(id, lifecycle = Restorable(); maintenance_res = Dict{BluePrint,Int64}(), maintenance = 0) = new(id, lifecycle, maintenance_res, maintenance)
+    restore_res::Dict{BluePrint,Int64}
+    restore::Float64
+    Tool(id, lifecycle = Restorable(); restore_res = Dict{BluePrint,Int64}(), restore = 0) = new(id, lifecycle, restore_res, restore)
 end
 
-Tool(blueprint::ToolBluePrint; maintenance_res::Dict{BluePrint,Int64} = Dict{BluePrint,Int64}(), maintenance::Real = 0) =
-    Tool(Identity(blueprint.type_id, blueprint.name), blueprint.lifecycle, maintenance_res, maintenance)
+Tool(blueprint::ToolBluePrint; restore_res::Dict{BluePrint,Int64} = Dict{BluePrint,Int64}(), restore::Real = 0) =
+    Tool(Identity(blueprint.type_id, blueprint.name), blueprint.lifecycle, restore_res, restore)
 
 Base.show(io::IO, e::Consumable) = print(io, "Tool(Name: $(e.name), $(e.lifecycle))")
 
+"""
+    Producer
+
+An Entity with the capability to produce other Entities.
+
+# Fields
+- `id`: The id of the Producer.
+- `lifecycle`: The lifecycle of the Producer.
+- `res_input`: The resources needed to produce 1 batch.
+- `output`: The output generated in one batch.
+- `max_batches`: The maximum amount of batches that can be produced.
+- `restore_res`: The resources needed to restore possible damage.
+- 'restore': The amount of damage restored per 'batch' of resources. This
+"""
 struct Producer <: Entity
     id::Identity
     lifecycle::Restorable
     res_input::Dict{BluePrint,Int64} # Required input per batch
     output::Dict{BluePrint,Int64} # Output per batch
     max_batches::Int64
-    maintenance_res::Dict{BluePrint,Int64}
-    maintenance::Float64
+    restore_res::Dict{BluePrint,Int64}
+    restore::Float64
     Producer(
         id,
         lifecycle = Restorable();
         res_input = Dict{BluePrint,Int64}(),
         output = Dict{BluePrint,Int64}(),
         max_batches = 1,
-        maintenance_res = Dict{BluePrint,Int64}(),
-        maintenance = 0
-    ) = new(id, lifecycle, res_input, output, max_batches, maintenance_res, maintenance)
+        restore_res = Dict{BluePrint,Int64}(),
+        restore = 0
+    ) = new(id, lifecycle, res_input, output, max_batches, restore_res, restore)
 end
 
-Producer(blueprint::ProducerBluePrint; maintenance_res::Dict{BluePrint,Int64} = Dict{BluePrint,Int64}(), maintenance::Real = 0) = Producer(
+Producer(blueprint::ProducerBluePrint; restore_res::Dict{BluePrint,Int64} = Dict{BluePrint,Int64}(), restore::Real = 0) = Producer(
     Identity(blueprint.type_id, blueprint.name),
     blueprint.lifecycle,
     res_input = blueprint.res_input,
     output = blueprint.output,
     max_batches = blueprint.max_batches,
-    maintenance_res = maintenance_res,
-    maintenance = maintenance
+    restore_res = restore_res,
+    restore = restore
 )
 
 Base.show(io::IO, e::Consumable) = print(
@@ -155,7 +169,13 @@ function use!(entity::Entity)
 end
 
 """
+    produce!
 
+Produces output based on the producer and the provided resouces. The maximum possible output is generated. The used resources are removed from the resources Dict and produced Entities are added to the products Dict.
+
+# Returns
+- produced entities
+- leftover resources
 """
 function produce!(producer::Producer, resources::Dict{BluePrint,Vector{Entity}} = Dict())
     products = Dict{BluePrint,Vector{Entity}}()
@@ -173,11 +193,11 @@ function produce!(producer::Producer, resources::Dict{BluePrint,Vector{Entity}} 
     return products, resources
 end
 
-function do_maintenance!(consumable::Comsumable, resources::Dict{BluePrint,Vector{Entity}} = Dict{BluePrint,Vector{Entity}}())
+function restore!(consumable::Consumable, resources::Dict{BluePrint,Vector{Entity}} = Dict{BluePrint,Vector{Entity}}())
     return consumable
 end
 
-function do_maintenance!(entity::Entity, resources::Dict{BluePrint,Vector{Entity}} = Dict{BluePrint,Vector{Entity}}())
+function restore!(entity::Entity, resources::Dict{BluePrint,Vector{Entity}} = Dict{BluePrint,Vector{Entity}}())
 
     return entity
 end
