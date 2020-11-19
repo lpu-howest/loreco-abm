@@ -17,10 +17,12 @@ end
     @test r.damage_thresholds == [(1, 1.0)]
     @test r.restoration_thresholds == [(1, 1.0)]
 
-    r = Restorable(0.8,
-        damage_thresholds = [(1, 1),(0.8, 2)],
+    r = Restorable(
+        0.8,
+        damage_thresholds = [(1, 1), (0.8, 2)],
         restoration_thresholds = [(1, 2), (0.6, 1), (0.2, 0)],
-        wear = 0.1)
+        wear = 0.1,
+    )
     @test health(r) == 0.8
     @test health(use!(r)) == 0.6
     @test health(use!(r)) == 0.4
@@ -65,4 +67,21 @@ end
     @test health(use!(t1)) == 0.9
     @test health(restore!(t1, 0.1)) == 1
     @test health(damage!(t1, 0.1)) == 0.9
+end
+
+
+@testset "Producer" begin
+    labour_bp = ConsumableBluePrint("Labour")
+    food_bp = ConsumableBluePrint("Food")
+    factory_bp = ProducerBluePrint(
+        "Factory",
+        res_input = Dict(labour_bp => 2),
+        output = Dict(food_bp => 1),
+        max_batches = 5,
+    )
+
+    foods = Dict(food_bp => [Consumable(labour_bp), Consumable(labour_bp)])
+    factory = Producer(factory_bp)
+
+
 end
