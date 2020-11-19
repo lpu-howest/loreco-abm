@@ -50,8 +50,8 @@ struct ProducerBluePrint <: BluePrint
     ProducerBluePrint(
         name,
         lifecycle = Restorable();
-        res_input = Dict(),
-        output = Dict(),
+        res_input = Dict{BluePrint,Int64}(),
+        output = Dict{BluePrint,Int64}(),
         max_batches::Int = 1,
     ) = new(uuid4(), name, lifecycle, res_input, output, max_batches)
 end
@@ -85,11 +85,13 @@ Base.show(io::IO, e::Consumable) = print(io, "Consumable(Name: $(e.name))")
 struct Tool <: Entity
     id::Identity
     lifecycle::Restorable
-    Tool(id, lifecycle = Restorable()) = new(id, lifecycle)
+    maintenance_res::Dict{BluePrint,Int64}
+    maintenance::Float64
+    Tool(id, lifecycle = Restorable(); maintenance_res = Dict{BluePrint,Int64}(), maintenance = 0) = new(id, lifecycle, maintenance_res, maintenance)
 end
 
-Tool(blueprint::ToolBluePrint) =
-    Tool(Identity(blueprint.type_id, blueprint.name), blueprint.lifecycle)
+Tool(blueprint::ToolBluePrint; maintenance_res::Dict{BluePrint,Int64} = Dict{BluePrint,Int64}(), maintenance::Real = 0) =
+    Tool(Identity(blueprint.type_id, blueprint.name), blueprint.lifecycle, maintenance_res, maintenance)
 
 Base.show(io::IO, e::Consumable) = print(io, "Tool(Name: $(e.name), $(e.lifecycle))")
 
@@ -99,21 +101,27 @@ struct Producer <: Entity
     res_input::Dict{BluePrint,Int64} # Required input per batch
     output::Dict{BluePrint,Int64} # Output per batch
     max_batches::Int64
+    maintenance_res::Dict{BluePrint,Int64}
+    maintenance::Float64
     Producer(
         id,
         lifecycle = Restorable();
-        res_input = Dict(),
-        output = Dict(),
+        res_input = Dict{BluePrint,Int64}(),
+        output = Dict{BluePrint,Int64}(),
         max_batches = 1,
-    ) = new(id, lifecycle, res_input, output, max_batches)
+        maintenance_res = Dict{BluePrint,Int64}(),
+        maintenance = 0
+    ) = new(id, lifecycle, res_input, output, max_batches, maintenance_res, maintenance)
 end
 
-Producer(blueprint::ProducerBluePrint) = Producer(
+Producer(blueprint::ProducerBluePrint; maintenance_res::Dict{BluePrint,Int64} = Dict{BluePrint,Int64}(), maintenance::Real = 0) = Producer(
     Identity(blueprint.type_id, blueprint.name),
     blueprint.lifecycle,
     res_input = blueprint.res_input,
     output = blueprint.output,
     max_batches = blueprint.max_batches,
+    maintenance_res = maintenance_res,
+    maintenance = maintenance
 )
 
 Base.show(io::IO, e::Consumable) = print(
@@ -146,21 +154,11 @@ function use!(entity::Entity)
     return entity
 end
 
-function damage!(entity::Entity, damage::Real)
-    damage!(entity.lifecycle, damage)
-    return entity
-end
-
-function restore!(entity::Entity, damage::Real)
-    restore!(entity.lifecycle, damage)
-    return entity
-end
-
 """
 
 """
-function produce!(producer::Producer, resources::Dict{UUID,Vector{Entity}} = Dict())
-    products = Dict{UUID,Vector{Entity}}()
+function produce!(producer::Producer, resources::Dict{BluePrint,Vector{Entity}} = Dict())
+    products = Dict{BluePrint,Vector{Entity}}()
 
     if isempty(setdiff(keys(producer.res_input), keys(resources)))
         production_done = false
@@ -170,5 +168,16 @@ function produce!(producer::Producer, resources::Dict{UUID,Vector{Entity}} = Dic
         end
     end
 
+    use!(producer)
+
     return products, resources
+end
+
+function do_maintenance!(consumable::Comsumable, resources::Dict{BluePrint,Vector{Entity}} = Dict{BluePrint,Vector{Entity}}())
+    return consumable
+end
+
+function do_maintenance!(entity::Entity, resources::Dict{BluePrint,Vector{Entity}} = Dict{BluePrint,Vector{Entity}}())
+
+    return entity
 end
