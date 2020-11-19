@@ -16,6 +16,9 @@ Base.show(io::IO, id::Identity) = print(io, "Identity($(id.name))")
 
 ==(x::Identity, y::Identity) = x.id == y.id
 
+name_of(id::Identity) = id.name
+type_id(id::Identity) = id.type_id
+
 abstract type Entity end
 abstract type Enhancer <: Entity end
 
@@ -63,13 +66,8 @@ Base.show(io::IO, bp::ProducerBluePrint) = print(
 
 ==(x::BluePrint, y::BluePrint) = x.type_id == y.type_id
 
-function type_id(blueprint::BluePrint)
-    return blueprint.type_id
-end
-
-function name_of(blueprint::BluePrint)
-    return blueprint.name
-end
+type_id(blueprint::BluePrint) = blueprint.type_id
+name_of(blueprint::BluePrint) = blueprint.name
 
 struct Consumable <: Entity
     id::Identity
@@ -80,7 +78,7 @@ end
 Consumable(blueprint::ConsumableBluePrint) =
     Consumable(Identity(blueprint.type_id, blueprint.name))
 
-Base.show(io::IO, e::Consumable) = print(io, "Consumable(Name: $(e.name))")
+Base.show(io::IO, e::Consumable) = print(io, "Consumable(Name: $(name_of(e)))")
 
 struct Tool <: Entity
     id::Identity
@@ -93,7 +91,7 @@ end
 Tool(blueprint::ToolBluePrint; restore_res::Dict{BluePrint,Int64} = Dict{BluePrint,Int64}(), restore::Real = 0) =
     Tool(Identity(blueprint.type_id, blueprint.name), blueprint.lifecycle, restore_res, restore)
 
-Base.show(io::IO, e::Consumable) = print(io, "Tool(Name: $(e.name), $(e.lifecycle))")
+Base.show(io::IO, e::Tool) = print(io, "Tool(Name: $(name_of(e)), $(e.lifecycle))")
 
 """
     Producer
@@ -138,14 +136,17 @@ Producer(blueprint::ProducerBluePrint; restore_res::Dict{BluePrint,Int64} = Dict
     restore = restore
 )
 
-Base.show(io::IO, e::Consumable) = print(
+Base.show(io::IO, e::Producer) = print(
     io,
-    "Producer(Name: $(e.name), $(e.lifecycle), Input: $(e.res_input), Output: $(e.output), Max batches: $(e.max_batches))",
+    "Producer(Name: $(name_of(e)), $(e.lifecycle), Input: $(e.res_input), Output: $(e.output), Max batches: $(e.max_batches))",
 )
+
 
 ==(x::Entity, y::Entity) = x.id == y.id
 
-is_type(e::Entity, b::BluePrint) = e.id.type_id == b.type_id
+type_id(entity::Entity) = type_id(entity.id)
+is_type(e::Entity, b::BluePrint) = type_id(e) == type_id(b)
+name_of(entity::Entity) = name_of(entity.id)
 
 function id(entity::Entity)
     return entity.id.id
