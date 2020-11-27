@@ -33,11 +33,11 @@ end
 
 @testset "Consumable" begin
     name = "Food"
-    blueprint = ConsumableBluePrint(name)
+    blueprint = ConsumableBlueprint(name)
     f1 = Consumable(blueprint)
     f2 = Consumable(blueprint)
-    @test f1.id.name == name
-    @test name_of(f1) == name
+    @test f1.id.blueprint.name == name
+    @test get_name(f1) == name
     @test typeof(id(f1)) == Base.UUID
     @test typeof(type_id(f1)) == Base.UUID
     @test id(f1) != type_id(f1)
@@ -45,19 +45,19 @@ end
     @test id(f1) != id(f2)
     @test health(f1) == 1
     @test health(use!(f1)) == 0
-    @test health(restore!(f1, 0.1)) == 0
+    @test health(restore!(f1)) == 0
     @test health(f2) == 1
-    @test health(restore!(f2, 0.1)) == 1
-    @test health(damage!(f2, 0.1)) == 0
+    @test health(restore!(f2)) == 1
+    @test health(use!(f2)) == 0
 end
 
 @testset "Tool" begin
     name = "Hammer"
-    blueprint = ToolBluePrint(name, Restorable(1, wear = 0.1))
+    blueprint = ToolBlueprint(name, Restorable(1, wear = 0.1))
     t1 = Tool(blueprint)
     t2 = Tool(blueprint)
     @test t1.id.name == name
-    @test name_of(t1) == name
+    @test get_name(t1) == name
     @test typeof(id(t1)) == Base.UUID
     @test typeof(type_id(t1)) == Base.UUID
     @test id(t1) != type_id(t1)
@@ -66,22 +66,28 @@ end
     @test health(t1) == 1
     @test health(use!(t1)) == 0.9
     @test health(restore!(t1, 0.1)) == 1
-    @test health(damage!(t1, 0.1)) == 0.9
 end
 
 
 @testset "Producer" begin
-    labour_bp = ConsumableBluePrint("Labour")
-    food_bp = ConsumableBluePrint("Food")
-    factory_bp = ProducerBluePrint(
+    labour_bp = ConsumableBlueprint("Labour")
+    food_bp = ConsumableBlueprint("Food")
+    factory_bp = ProducerBlueprint(
         "Factory",
         res_input = Dict(labour_bp => 2),
         output = Dict(food_bp => 1),
         max_batches = 5,
     )
 
-    foods = Dict(food_bp => [Consumable(labour_bp), Consumable(labour_bp)])
+    labour = Dict(labour_bp => [Consumable(labour_bp), Consumable(labour_bp)])
     factory = Producer(factory_bp)
 
+    produce!(factory, labour)
+end
 
+@testset "Entities" begin
+    e = Entities()
+    cb = ConsumableBlueprint("Consumable")
+    c = Consumable(cb)
+    push!(e, c)
 end

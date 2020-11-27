@@ -84,7 +84,7 @@ end
 
 """
     health
-    
+
 Returns the current health.
 """
 function health(lifecycle::Lifecycle)

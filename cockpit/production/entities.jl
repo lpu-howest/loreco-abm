@@ -5,93 +5,122 @@ import Base: ==
 using Main.Types
 using UUIDs
 
-struct Identity
-    id::UUID
-    type_id::UUID
-    name::String
-    Identity(type_id, name) = new(uuid4(), type_id, name)
-end
-
-Base.show(io::IO, id::Identity) = print(io, "Identity($(id.name))")
-
-==(x::Identity, y::Identity) = x.id == y.id
-
-name_of(id::Identity) = id.name
-type_id(id::Identity) = id.type_id
-
 abstract type Entity end
 abstract type Enhancer <: Entity end
 
-abstract type BluePrint end
+abstract type Blueprint end
 
-struct ConsumableBluePrint <: BluePrint
+struct ConsumableBlueprint <: Blueprint
     type_id::UUID
     name::String
-    ConsumableBluePrint(name) = new(uuid4(), name)
+    ConsumableBlueprint(name) = new(uuid4(), name)
 end
 
-Base.show(io::IO, bp::ConsumableBluePrint) =
-    print(io, "ConsumableBluePrint(Name: $(bp.name))")
+Base.show(io::IO, bp::ConsumableBlueprint) =
+    print(io, "ConsumableBlueprint(Name: $(get_name(bp)))")
 
-struct ToolBluePrint <: BluePrint
+struct ToolBlueprint <: Blueprint
     type_id::UUID
     name::String
     lifecycle::Restorable
-    ToolBluePrint(name, lifecycle = Restorable()) = new(uuid4(), name, lifecycle)
+    restore_res::Dict{Blueprint,Int64}
+    restore::Float64
+    ToolBlueprint(name,
+        lifecycle = Restorable();
+        restore_res::Dict{Blueprint,Int64} = Dict{Blueprint,Int64}(),
+        restore::Float64 = 0) = new(uuid4(), name, lifecycle, restore_res, restore)
 end
 
-Base.show(io::IO, bp::ToolBluePrint) =
-    print(io, "ToolBluePrint(Name: $(bp.name), $(bp.lifecycle))")
+Base.show(io::IO, bp::ToolBlueprint) =
+    print(io, "ToolBlueprint(Name: $(get_name(bp)), $(bp.lifecycle), Restore res: $(restore_res), Restore: $(restore))")
 
-struct ProducerBluePrint <: BluePrint
+struct ProducerBlueprint <: Blueprint
     type_id::UUID
     name::String
     lifecycle::Restorable
-    res_input::Dict{BluePrint,Int64} # Required input per batch
-    output::Dict{BluePrint,Int64} # Output per batch. The BluePrint and the number of items per BluePrint.
+    restore_res::Dict{Blueprint,Int64}
+    restore::Float64
+    res_input::Dict{Blueprint,Int64} # Required input per batch
+    output::Dict{Blueprint,Int64} # Output per batch. The Blueprint and the number of items per blueprint.
     max_batches::Int64
-    ProducerBluePrint(
+    ProducerBlueprint(
         name,
         lifecycle = Restorable();
-        res_input = Dict{BluePrint,Int64}(),
-        output = Dict{BluePrint,Int64}(),
+        restore_res::Dict{Blueprint,Int64} = Dict{Blueprint,Int64}(),
+        restore::Float64 = 0,
+        res_input = Dict{Blueprint,Int64}(),
+        output = Dict{Blueprint,Int64}(),
         max_batches::Int = 1,
-    ) = new(uuid4(), name, lifecycle, res_input, output, max_batches)
+    ) = new(uuid4(), name, lifecycle, restore_res, restore, res_input, output, max_batches)
 end
 
-Base.show(io::IO, bp::ProducerBluePrint) = print(
+Base.show(io::IO, bp::ProducerBlueprint) = print(
     io,
-    "ProducerBluePrint(Name: $(bp.name), $(bp.lifecycle), Input: $(bp.res_input), Output: $(bp.output), Max batches: $(bp.max_batches))",
+    "ProducerBlueprint(Name: $(get_name(bp)), $(bp.lifecycle), Restore res: $(restore_res), Restore: $(restore), Input: $(bp.res_input), Output: $(bp.output), Max batches: $(bp.max_batches))",
 )
 
-==(x::BluePrint, y::BluePrint) = x.type_id == y.type_id
+type_id(blueprint::Blueprint) = blueprint.type_id
+get_name(blueprint::Blueprint) = blueprint.name
+get_lifecycle(blueprint::Blueprint) = deepcopy(blueprint.lifecycle)
 
-type_id(blueprint::BluePrint) = blueprint.type_id
-name_of(blueprint::BluePrint) = blueprint.name
+==(x::Blueprint, y::Blueprint) = type_id(x) == type_id(y)
+
+"""
+    Entities
+"""
+
+struct Entities
+    entities::Dict{Blueprint,Vector{Entity}}
+    Entities() = new(Dict{Blueprint,Vector{Entity}}())
+end
+
+Base.keys(entities::Entities) = keys(entities.entities)
+Base.values(entities::Entities) = values(entities.entities)
+Base.getindex(entities::Entities, index::Blueprint) = entities.entities[index]
+Base.setindex!(entities::Entities, e::Array{Entity,1}, index::Blueprint) = (entities.entities[index] = e)
+# Base.setindex!(entities::Entities, e::Entity, index::Blueprint) = (entities.entities[index] = e)
+
+function Base.push!(entities::Entities, entity::Entity)
+    if entity.blueprint in keys(entities)
+        push!(entities[entity.blueprint], entity)
+    else
+        entities[entity.blueprint] = Vector{Entity}([entity])
+    end
+
+    return entities
+end
+
+function Base.pop!(entities::Entities, blueprint::Blueprint)
+    if blueprint in keys(entities)
+        e = pop!(entities[blueprint])
+
+        if length(entities[blueprint]) == 0
+            pop!(entities.entities, blueprint)
+        end
+
+        return e
+    else
+        return nothing
+    end
+end
 
 struct Consumable <: Entity
-    id::Identity
+    id::UUID
+    blueprint::Blueprint
     lifecycle::SingleUse
-    Consumable(id) = new(id, SingleUse())
+    Consumable(blueprint) = new(uuid4(), blueprint, SingleUse())
 end
 
-Consumable(blueprint::ConsumableBluePrint) =
-    Consumable(Identity(blueprint.type_id, blueprint.name))
-
-Base.show(io::IO, e::Consumable) = print(io, "Consumable(Name: $(name_of(e)))")
+Base.show(io::IO, e::Consumable) = print(io, "Consumable(Name: $(get_name(e)), Health: $(health(e)), Blueprint: $(e.blueprint)))")
 
 struct Tool <: Entity
-    id::Identity
+    id::UUID
+    blueprint::Blueprint
     lifecycle::Restorable
-    restore_res::Dict{BluePrint,Int64}
-    restore::Float64
-    Tool(id, lifecycle = Restorable(); restore_res = Dict{BluePrint,Int64}(), restore = 0) = new(id, lifecycle, restore_res, restore)
+    Tool(blueprint) = new(uuid4(), blueprint, get_lifecycle(blueprint))
 end
 
-Tool(blueprint::ToolBluePrint; restore_res::Dict{BluePrint,Int64} = Dict{BluePrint,Int64}(), restore::Real = 0) =
-    Tool(Identity(blueprint.type_id, blueprint.name), blueprint.lifecycle, restore_res, restore)
-
-Base.show(io::IO, e::Tool) = print(io, "Tool(Name: $(name_of(e)), $(e.lifecycle))")
+Base.show(io::IO, e::Tool) = print(io, "Tool(Name: $(get_name(e)), Health: $(health(e)), Blueprint: $(blueprint)))")
 
 """
     Producer
@@ -108,65 +137,65 @@ An Entity with the capability to produce other Entities.
 - 'restore': The amount of damage restored per 'batch' of resources. This
 """
 struct Producer <: Entity
-    id::Identity
+    id::UUID
+    blueprint::Blueprint
     lifecycle::Restorable
-    res_input::Dict{BluePrint,Int64} # Required input per batch
-    output::Dict{BluePrint,Int64} # Output per batch
+    res_input::Dict{Blueprint,Int64} # Required input per batch
+    output::Dict{Blueprint,Int64} # Output per batch
     max_batches::Int64
-    restore_res::Dict{BluePrint,Int64}
-    restore::Float64
     Producer(
-        id,
-        lifecycle = Restorable();
-        res_input = Dict{BluePrint,Int64}(),
-        output = Dict{BluePrint,Int64}(),
-        max_batches = 1,
-        restore_res = Dict{BluePrint,Int64}(),
-        restore = 0
-    ) = new(id, lifecycle, res_input, output, max_batches, restore_res, restore)
+        blueprint::Blueprint;
+        res_input = Dict{Blueprint,Int64}(),
+        output = Dict{Blueprint,Int64}(),
+        max_batches = Inf
+    ) = new(uuid4(), blueprint, res_input, output, max_batches)
 end
-
-Producer(blueprint::ProducerBluePrint; restore_res::Dict{BluePrint,Int64} = Dict{BluePrint,Int64}(), restore::Real = 0) = Producer(
-    Identity(blueprint.type_id, blueprint.name),
-    blueprint.lifecycle,
-    res_input = blueprint.res_input,
-    output = blueprint.output,
-    max_batches = blueprint.max_batches,
-    restore_res = restore_res,
-    restore = restore
-)
 
 Base.show(io::IO, e::Producer) = print(
     io,
-    "Producer(Name: $(name_of(e)), $(e.lifecycle), Input: $(e.res_input), Output: $(e.output), Max batches: $(e.max_batches))",
+    "Producer(Name: $(get_name(e)), Health: $(health(e)), Blueprint: $(blueprint)), Input: $(e.res_input), Output: $(e.output), Max batches: $(e.max_batches))",
 )
-
 
 ==(x::Entity, y::Entity) = x.id == y.id
 
-type_id(entity::Entity) = type_id(entity.id)
-is_type(e::Entity, b::BluePrint) = type_id(e) == type_id(b)
-name_of(entity::Entity) = name_of(entity.id)
+type_id(entity::Entity) = type_id(entity.blueprint)
+is_type(entity::Entity, blueprint::Blueprint) = type_id(entity) == type_id(blueprint)
+get_name(entity::Entity) = get_name(entity.blueprint)
+id(entity::Entity) = entity.id
+health(entity::Entity) = health(entity.lifecycle)
 
-function id(entity::Entity)
-    return entity.id.id
-end
-
-function type_id(entity::Entity)
-    return entity.id.type_id
-end
-
-function name_of(entity::Entity)
-    return entity.id.name
-end
-
-function health(entity::Entity)
-    return health(entity.lifecycle)
-end
+ENTITY_CONSTRUCTORS = Dict(ConsumableBlueprint => Consumable, ToolBlueprint => Tool, ProducerBlueprint => Producer)
 
 function use!(entity::Entity)
     use!(entity.lifecycle)
     return entity
+end
+
+function extract!(requirements::Dict{Blueprint,Int64}, source::Entities, max::Int = Inf)
+    extracting = true
+    extracted = 0
+
+    while extracted < max && extracting
+        res_available = true
+
+        for blueprint in keys(requirements)
+            res_available &= length(source[blueprint]) >= requirements[blueprint]
+        end
+
+        if res_available
+            for blueprint in keys(requirements)
+                for i in range(requirements[blueprint])
+                    pop!(entities[blueprint])
+                end
+            end
+
+            extracted += 1
+        else
+            extracting = false
+        end
+    end
+
+    return extracted
 end
 
 """
@@ -178,27 +207,30 @@ Produces output based on the producer and the provided resouces. The maximum pos
 - produced entities
 - leftover resources
 """
-function produce!(producer::Producer, resources::Dict{BluePrint,Vector{Entity}} = Dict())
-    products = Dict{BluePrint,Vector{Entity}}()
+function produce!(producer::Producer, resources::Entities = Entities())
+    products = Entities()
+    production = extract!(producer.res_input, resources, producer.max_batches)
 
-    if isempty(setdiff(keys(producer.res_input), keys(resources)))
-        production_done = false
-
-        while !production_done # TODO eliminate keys with empty vectors
-
+    if production > 0
+        for i in range(production)
+            for blueprint in keys(producer.output)
+                for j in producer.output[blueprint]
+                    push!(products, ENTITY_CONSTRUCTORS[typeof(blueprint)](blueprint))
+                end
+            end
         end
-    end
 
-    use!(producer)
+        use!(producer)
+    end
 
     return products, resources
 end
 
-function restore!(consumable::Consumable, resources::Dict{BluePrint,Vector{Entity}} = Dict{BluePrint,Vector{Entity}}())
+function restore!(consumable::Consumable, resources::Entities = Entities())
     return consumable
 end
 
-function restore!(entity::Entity, resources::Dict{BluePrint,Vector{Entity}} = Dict{BluePrint,Vector{Entity}}())
+function restore!(entity::Entity, resources::Entities = Entities())
 
     return entity
 end
