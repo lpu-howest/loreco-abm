@@ -40,23 +40,23 @@ struct ProducerBlueprint <: Blueprint
     lifecycle::Restorable
     restore_res::Dict{Blueprint,Int64}
     restore::Float64
-    res_input::Dict{Blueprint,Int64} # Required input per batch
-    output::Dict{Blueprint,Int64} # Output per batch. The Blueprint and the number of items per blueprint.
+    batch_req::Dict{Blueprint,Int64} # Required input per batch
+    batch::Dict{Blueprint,Int64} # batch per batch. The Blueprint and the number of items per blueprint.
     max_batches::Int64
     ProducerBlueprint(
         name,
         lifecycle = Restorable();
         restore_res::Dict{Blueprint,Int64} = Dict{Blueprint,Int64}(),
         restore::Float64 = 0,
-        res_input = Dict{Blueprint,Int64}(),
-        output = Dict{Blueprint,Int64}(),
+        batch_req = Dict{Blueprint,Int64}(),
+        batch = Dict{Blueprint,Int64}(),
         max_batches::Int = 1,
-    ) = new(uuid4(), name, lifecycle, restore_res, restore, res_input, output, max_batches)
+    ) = new(uuid4(), name, lifecycle, restore_res, restore, batch_req, batch, max_batches)
 end
 
 Base.show(io::IO, bp::ProducerBlueprint) = print(
     io,
-    "ProducerBlueprint(Name: $(get_name(bp)), $(bp.lifecycle), Restore res: $(restore_res), Restore: $(restore), Input: $(bp.res_input), Output: $(bp.output), Max batches: $(bp.max_batches))",
+    "ProducerBlueprint(Name: $(get_name(bp)), $(bp.lifecycle), Restore res: $(restore_res), Restore: $(restore), Input: $(bp.batch_req), batch: $(bp.batch), Max batches: $(bp.max_batches))",
 )
 
 type_id(blueprint::Blueprint) = blueprint.type_id
@@ -78,7 +78,6 @@ Base.keys(entities::Entities) = keys(entities.entities)
 Base.values(entities::Entities) = values(entities.entities)
 Base.getindex(entities::Entities, index::Blueprint) = entities.entities[index]
 Base.setindex!(entities::Entities, e::Array{Entity,1}, index::Blueprint) = (entities.entities[index] = e)
-# Base.setindex!(entities::Entities, e::Entity, index::Blueprint) = (entities.entities[index] = e)
 
 function Base.push!(entities::Entities, entity::Entity)
     if entity.blueprint in keys(entities)
@@ -130,8 +129,8 @@ An Entity with the capability to produce other Entities.
 # Fields
 - `id`: The id of the Producer.
 - `lifecycle`: The lifecycle of the Producer.
-- `res_input`: The resources needed to produce 1 batch.
-- `output`: The output generated in one batch.
+- `batch_req`: The resources needed to produce 1 batch.
+- `batch`: The batch generated in one batch.
 - `max_batches`: The maximum amount of batches that can be produced.
 - `restore_res`: The resources needed to restore possible damage.
 - 'restore': The amount of damage restored per 'batch' of resources. This
@@ -140,20 +139,24 @@ struct Producer <: Entity
     id::UUID
     blueprint::Blueprint
     lifecycle::Restorable
-    res_input::Dict{Blueprint,Int64} # Required input per batch
-    output::Dict{Blueprint,Int64} # Output per batch
+    batch_req::Dict{Blueprint,Int64} # Required resources per batch
+    batch::Dict{Blueprint,Int64} # batch per batch
     max_batches::Int64
+    res_req::Dict{Blueprint,Int64} # Required resources for repair
+    res_amount::Real # Damage repaired
     Producer(
         blueprint::Blueprint;
-        res_input = Dict{Blueprint,Int64}(),
-        output = Dict{Blueprint,Int64}(),
-        max_batches = Inf
-    ) = new(uuid4(), blueprint, res_input, output, max_batches)
+        batch_req = Dict{Blueprint,Int64}(),
+        batch = Dict{Blueprint,Int64}(),
+        max_batches = Inf,
+        res_req = Dict{Blueprint, Int64}(),
+        res_amount = 0
+    ) = new(uuid4(), blueprint, batch_req, batch, max_batches, res_req, res_amount)
 end
 
 Base.show(io::IO, e::Producer) = print(
     io,
-    "Producer(Name: $(get_name(e)), Health: $(health(e)), Blueprint: $(blueprint)), Input: $(e.res_input), Output: $(e.output), Max batches: $(e.max_batches))",
+    "Producer(Name: $(get_name(e)), Health: $(health(e)), Blueprint: $(blueprint)), Input: $(e.batch_req), batch: $(e.batch), Max batches: $(e.max_batches))",
 )
 
 ==(x::Entity, y::Entity) = x.id == y.id
@@ -201,7 +204,7 @@ end
 """
     produce!
 
-Produces output based on the producer and the provided resouces. The maximum possible output is generated. The used resources are removed from the resources Dict and produced Entities are added to the products Dict.
+Produces batch based on the producer and the provided resouces. The maximum possible batch is generated. The used resources are removed from the resources Dict and produced Entities are added to the products Dict.
 
 # Returns
 - produced entities
@@ -209,12 +212,12 @@ Produces output based on the producer and the provided resouces. The maximum pos
 """
 function produce!(producer::Producer, resources::Entities = Entities())
     products = Entities()
-    production = extract!(producer.res_input, resources, producer.max_batches)
+    production = extract!(producer.batch_req, resources, producer.max_batches)
 
     if production > 0
         for i in range(production)
-            for blueprint in keys(producer.output)
-                for j in producer.output[blueprint]
+            for blueprint in keys(producer.batch)
+                for j in producer.batch[blueprint]
                     push!(products, ENTITY_CONSTRUCTORS[typeof(blueprint)](blueprint))
                 end
             end
@@ -226,11 +229,20 @@ function produce!(producer::Producer, resources::Entities = Entities())
     return products, resources
 end
 
+function damage!(entity::Entity, damage::Real)
+    damage!(entity.lifecycle, damage)
+
+    return entity
+end
+
 function restore!(consumable::Consumable, resources::Entities = Entities())
     return consumable
 end
 
 function restore!(entity::Entity, resources::Entities = Entities())
+    if extract!(entity.res_rec, entities, 1) > 0
+        restore!(entity.lifecycle, entity.res_amount)
+    end
 
     return entity
 end
