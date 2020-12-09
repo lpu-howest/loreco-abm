@@ -25,11 +25,11 @@ struct ProductBlueprint <: Blueprint
     type_id::UUID
     name::String
     lifecycle::Restorable
-    restore_res::Dict{<:Blueprint,Int64}
+    restore_res::Dict{Blueprint,Int64}
     restore::Float64
     ProductBlueprint(name::String,
         lifecycle::Restorable = Restorable();
-        restore_res::Dict{<:Blueprint,Int64} = Dict{<:Blueprint,Int64}(),
+        restore_res::Dict{Blueprint,Int64} = Dict{Blueprint,Int64}(),
         restore::Real = 0) = new(uuid4(), name, lifecycle, restore_res, restore)
 end
 
@@ -40,19 +40,19 @@ struct ProducerBlueprint <: Blueprint
     type_id::UUID
     name::String
     lifecycle::Restorable
-    restore_res::Dict{<:Blueprint,Int64}
+    restore_res::Dict{Blueprint,Int64}
     restore::Float64
-    batch_req::Dict{<:Blueprint,Int64} # Required input per batch
-    batch::Dict{<:Blueprint,Int64} # batch per batch. The Blueprint and the number of items per blueprint.
+    batch_req::Dict{Blueprint,Int64} # Required input per batch
+    batch::Dict{Blueprint,Int64} # batch per batch. The Blueprint and the number of items per blueprint.
     max_production::Int64 # Max number of batches per production cycle
 
     ProducerBlueprint(
         name::String,
         lifecycle::Restorable = Restorable();
-        restore_res::Dict{<:Blueprint,Int64} = Dict{<:Blueprint,Int64}(),
+        restore_res::Dict{Blueprint,Int64} = Dict{Blueprint,Int64}(),
         restore::Real = 0,
-        batch_req::Dict{<:Blueprint,Int64} = Dict{<:Blueprint,Int64}(),
-        batch::Dict{<:Blueprint,Int64} = Dict{<:Blueprint,Int64}(),
+        batch_req::Dict{Blueprint,Int64} = Dict{Blueprint,Int64}(),
+        batch::Dict{Blueprint,Int64} = Dict{Blueprint,Int64}(),
         max_production::Int64 = INF
     ) = new(uuid4(), name, lifecycle, restore_res, restore, batch_req, batch, max_production)
 end
@@ -72,8 +72,8 @@ get_lifecycle(blueprint::Blueprint) = deepcopy(blueprint.lifecycle)
 """
 
 struct Entities
-    entities::Dict{<:Blueprint,Vector{Entity}}
-    Entities() = new(Dict{<:Blueprint,Vector{Entity}}())
+    entities::Dict{Blueprint,Vector{Entity}}
+    Entities() = new(Dict{Blueprint,Vector{Entity}}())
 end
 
 Base.keys(entities::Entities) = keys(entities.entities)
