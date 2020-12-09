@@ -1,5 +1,3 @@
-module BalanceSheet
-
 using UUIDs
 
 import Base: ==
@@ -23,8 +21,8 @@ EQUITY = BalanceEntry("Equity")
 Base.show(io::IO, entry::BalanceEntry) = print(io, "BalanceEntry($(entry.name))")
 
 struct Balance
-    balance::Dict{EntryType, Dict{BalanceEntry, Float64}}
-    Balance() = new(Dict(asset => Dict{BalanceEntry, Float64}(), liability => Dict{BalanceEntry, Float64}(EQUITY => 0)))
+    balance::Dict{EntryType, Dict{BalanceEntry, BigFloat}}
+    Balance() = new(Dict(asset => Dict{BalanceEntry, BigFloat}(), liability => Dict{BalanceEntry, BigFloat}(EQUITY => 0)))
 end
 
 Base.show(io::IO, b::Balance) = print(io, "Balance(Assets: $(b.balance[asset]), Liabilities: $(b.balance[liability]))")
@@ -39,7 +37,7 @@ liabilities_value(b::Balance) = sum(values(b.balance[liability]))
 liabilities_net_value(b::Balance) = liabilities_value(b) - equity(b)
 equity(b::Balance) = b.balance[liability][EQUITY]
 
-function book_amount!(entry::BalanceEntry, dict::Dict{BalanceEntry, Float64}, amount::Real)
+function book_amount!(entry::BalanceEntry, dict::Dict{BalanceEntry, BigFloat}, amount::Real)
     if entry in keys(dict)
         dict[entry] += amount
     else
@@ -75,6 +73,4 @@ end
 
 function transfer_liability!(b1::Balance, b2::Balance, entry::BalanceEntry, amount::Real)
     transfer!(b1, liability, b2, liability, entry, amount)
-end
-
 end

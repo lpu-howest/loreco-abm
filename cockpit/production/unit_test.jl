@@ -51,11 +51,11 @@ end
     @test health(use!(f2)) == 0
 end
 
-@testset "Tool" begin
+@testset "Product" begin
     name = "Hammer"
-    blueprint = ToolBlueprint(name, Restorable(1, wear = 0.1))
-    t1 = Tool(blueprint)
-    t2 = Tool(blueprint)
+    blueprint = ProductBlueprint(name, Restorable(1, wear = 0.1))
+    t1 = Product(blueprint)
+    t2 = Product(blueprint)
     @test t1.id.name == name
     @test get_name(t1) == name
     @test typeof(id(t1)) == Base.UUID
@@ -74,9 +74,8 @@ end
     food_bp = ConsumableBlueprint("Food")
     factory_bp = ProducerBlueprint(
         "Factory",
-        res_input = Dict(labour_bp => 2),
-        output = Dict(food_bp => 1),
-        max_batches = 5,
+        batch_req = Dict(labour_bp => 2),
+        batch = Dict(food_bp => 1)
     )
 
     labour = Dict(labour_bp => [Consumable(labour_bp), Consumable(labour_bp)])
