@@ -1,5 +1,5 @@
 using Test
-using Main.BalanceSheet
+using Main.Finance
 
 @testset "Balance" begin
     b = Balance()

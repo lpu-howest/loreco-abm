@@ -8,7 +8,7 @@ export Identity
 export Entities, Entity, Enhancer, Consumable, Product, Producer
 export push!, pop!
 export Blueprint, ConsumableBlueprint, ProductBlueprint, ProducerBlueprint
-export health, id, type_id, get_name, is_type
+export health, id, get_blueprint, type_id, get_name, is_type
 export use!, produce!, damage!, restore!
 
 end

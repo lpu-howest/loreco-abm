@@ -1,3 +1,4 @@
+
 include("lifecycle.jl")
 
 import Base: ==
@@ -25,11 +26,11 @@ struct ProductBlueprint <: Blueprint
     type_id::UUID
     name::String
     lifecycle::Restorable
-    restore_res::Dict{Blueprint,Int64}
+    restore_res::Dict{<:Blueprint,Int64}
     restore::Float64
     ProductBlueprint(name::String,
         lifecycle::Restorable = Restorable();
-        restore_res::Dict{Blueprint,Int64} = Dict{Blueprint,Int64}(),
+        restore_res::Dict{<:Blueprint,Int64} = Dict{Blueprint,Int64}(),
         restore::Real = 0) = new(uuid4(), name, lifecycle, restore_res, restore)
 end
 
@@ -40,19 +41,19 @@ struct ProducerBlueprint <: Blueprint
     type_id::UUID
     name::String
     lifecycle::Restorable
-    restore_res::Dict{Blueprint,Int64}
+    restore_res::Dict{<:Blueprint,Int64}
     restore::Float64
-    batch_req::Dict{Blueprint,Int64} # Required input per batch
-    batch::Dict{Blueprint,Int64} # batch per batch. The Blueprint and the number of items per blueprint.
+    batch_req::Dict{<:Blueprint,Int64} # Required input per batch
+    batch::Dict{<:Blueprint,Int64} # batch per batch. The Blueprint and the number of items per blueprint.
     max_production::Int64 # Max number of batches per production cycle
 
     ProducerBlueprint(
         name::String,
         lifecycle::Restorable = Restorable();
-        restore_res::Dict{Blueprint,Int64} = Dict{Blueprint,Int64}(),
+        restore_res::Dict{<:Blueprint,Int64} = Dict{Blueprint,Int64}(),
         restore::Real = 0,
-        batch_req::Dict{Blueprint,Int64} = Dict{Blueprint,Int64}(),
-        batch::Dict{Blueprint,Int64} = Dict{Blueprint,Int64}(),
+        batch_req::Dict{<:Blueprint,Int64} = Dict{Blueprint,Int64}(),
+        batch::Dict{<:Blueprint,Int64} = Dict{Blueprint,Int64}(),
         max_production::Int64 = INF
     ) = new(uuid4(), name, lifecycle, restore_res, restore, batch_req, batch, max_production)
 end
@@ -76,6 +77,18 @@ struct Entities
     Entities() = new(Dict{Blueprint,Vector{Entity}}())
 end
 
+function Entities(resources::Dict{B,Vector{E}}) where {B <: Blueprint, E <: Entity}
+    entities = Entities()
+
+    for blueprint in keys(resources)
+        for entity in resources[blueprint]
+            push!(entities, entity)
+        end
+    end
+
+    return entities
+end
+
 Base.keys(entities::Entities) = keys(entities.entities)
 Base.values(entities::Entities) = values(entities.entities)
 Base.getindex(entities::Entities, index::Blueprint) = entities.entities[index]
@@ -91,12 +104,12 @@ function Base.push!(entities::Entities, entity::Entity)
     return entities
 end
 
-function Base.pop!(entities::Entities, blueprint::Blueprint)
-    if blueprint in keys(entities)
-        e = pop!(entities[blueprint])
+function Base.pop!(entities::Entities, bp::Blueprint)
+    if bp in keys(entities)
+        e = pop!(entities[bp])
 
-        if length(entities[blueprint]) == 0
-            pop!(entities.entities, blueprint)
+        if length(entities[bp]) == 0
+            pop!(entities.entities, bp)
         end
 
         return e
@@ -149,10 +162,10 @@ Base.show(io::IO, e::Producer) = print(
 
 ==(x::Entity, y::Entity) = x.id == y.id
 
-blueprint(entity::Entity) = entity.blueprint
-type_id(entity::Entity) = type_id(blueprint(entity))
+get_blueprint(entity::Entity) = entity.blueprint
+type_id(entity::Entity) = type_id(get_blueprint(entity))
 is_type(entity::Entity, blueprint::Blueprint) = type_id(entity) == type_id(blueprint)
-get_name(entity::Entity) = get_name(blueprint(entity))
+get_name(entity::Entity) = get_name(get_blueprint(entity))
 id(entity::Entity) = entity.id
 health(entity::Entity) = health(entity.lifecycle)
 
@@ -163,21 +176,21 @@ function use!(entity::Entity)
     return entity
 end
 
-function extract!(requirements::Dict{Blueprint,Int64}, source::Entities, max::Int = INF)
+function extract!(requirements::Dict{B,Int64}, source::Entities, max::Int = INF) where {B <: Blueprint}
     extracting = true
     extracted = 0
 
     while (max == INF || extracted < max) && extracting
         res_available = true
 
-        for blueprint in keys(requirements)
-            res_available &= length(source[blueprint]) >= requirements[blueprint]
+        for bp in keys(requirements)
+            res_available &= bp in keys(source) && length(source[bp]) >= requirements[bp]
         end
 
         if res_available
-            for blueprint in keys(requirements)
-                for i in range(requirements[blueprint])
-                    pop!(entities[blueprint])
+            for bp in keys(requirements)
+                for i in range(1, length = requirements[bp])
+                    pop!(source, bp)
                 end
             end
 
@@ -203,13 +216,13 @@ function produce!(producer::Producer, resources::Entities = Entities())
     products = Entities()
 
     if health(producer) > 0
-        production = extract!(blueprint(producer).batch_req, resources, blueprint(producer).max_batches)
+        production = extract!(get_blueprint(producer).batch_req, resources, get_blueprint(producer).max_production)
 
         if production > 0
-            for i in range(production)
-                for blueprint in keys(blueprint(producer).batch)
-                    for j in blueprint(producer).batch[blueprint]
-                        push!(products, ENTITY_CONSTRUCTORS[typeof(blueprint)](blueprint))
+            for i in range(1, length = production)
+                for bp in keys(get_blueprint(producer).batch)
+                    for j in get_blueprint(producer).batch[bp]
+                        push!(products, ENTITY_CONSTRUCTORS[typeof(bp)](bp))
                     end
                 end
             end
@@ -218,7 +231,7 @@ function produce!(producer::Producer, resources::Entities = Entities())
         end
     end
 
-    return products, resources
+    return products
 end
 
 function damage!(entity::Entity, damage::Real)
@@ -232,8 +245,8 @@ function restore!(consumable::Consumable, resources::Entities = Entities())
 end
 
 function restore!(entity::Entity, resources::Entities = Entities())
-    if extract!(blueprint(entity).res_rec, entities, 1) > 0
-        restore!(entity.lifecycle, blueprint(entity).res_amount)
+    if extract!(get_blueprint(entity).restore_res, resources, 1) > 0
+        restore!(entity.lifecycle, get_blueprint(entity).restore)
     end
 
     return entity

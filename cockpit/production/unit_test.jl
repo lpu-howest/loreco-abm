@@ -33,10 +33,10 @@ end
 
 @testset "Consumable" begin
     name = "Food"
-    blueprint = ConsumableBlueprint(name)
-    f1 = Consumable(blueprint)
-    f2 = Consumable(blueprint)
-    @test f1.id.blueprint.name == name
+    bp = ConsumableBlueprint(name)
+    f1 = Consumable(bp)
+    f2 = Consumable(bp)
+    @test get_blueprint(f1).name == name
     @test get_name(f1) == name
     @test typeof(id(f1)) == Base.UUID
     @test typeof(type_id(f1)) == Base.UUID
@@ -53,10 +53,10 @@ end
 
 @testset "Product" begin
     name = "Hammer"
-    blueprint = ProductBlueprint(name, Restorable(1, wear = 0.1))
-    t1 = Product(blueprint)
-    t2 = Product(blueprint)
-    @test t1.id.name == name
+    bp = ProductBlueprint(name, Restorable(1, wear = 0.1), restore = 0.1)
+    t1 = Product(bp)
+    t2 = Product(bp)
+    @test get_blueprint(t1).name == name
     @test get_name(t1) == name
     @test typeof(id(t1)) == Base.UUID
     @test typeof(type_id(t1)) == Base.UUID
@@ -65,7 +65,7 @@ end
     @test id(t1) != id(t2)
     @test health(t1) == 1
     @test health(use!(t1)) == 0.9
-    @test health(restore!(t1, 0.1)) == 1
+    @test health(restore!(t1)) == 1
 end
 
 
@@ -78,10 +78,15 @@ end
         batch = Dict(food_bp => 1)
     )
 
-    labour = Dict(labour_bp => [Consumable(labour_bp), Consumable(labour_bp)])
+    labour = Entities(Dict(labour_bp => [Consumable(labour_bp), Consumable(labour_bp)]))
     factory = Producer(factory_bp)
 
-    produce!(factory, labour)
+    products = produce!(factory, labour)
+
+    @test !(labour_bp in keys(labour))
+    @test length(products[food_bp]) == 1
+    @test get_name(products[food_bp][1]) == "Food"
+    @test typeof(products[food_bp][1]) == Consumable
 end
 
 @testset "Entities" begin
