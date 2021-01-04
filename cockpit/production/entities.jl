@@ -105,17 +105,29 @@ function Base.push!(entities::Entities, entity::Entity)
 end
 
 function Base.pop!(entities::Entities, bp::Blueprint)
+    e = nothing
+
     if bp in keys(entities)
-        e = pop!(entities[bp])
+        if length(entities[bp]) > 0
+            e = pop!(entities[bp])
+        end
 
         if length(entities[bp]) == 0
             pop!(entities.entities, bp)
         end
-
-        return e
-    else
-        return nothing
     end
+
+    return e
+end
+
+function Base.deleteat!(entities::Entities, bp::Blueprint, index::Integer)
+    deleteat!(entities[bp], index)
+
+    if length(entities[bp]) == 0
+        pop!(entities, bp)
+    end
+
+    return entities
 end
 
 struct Consumable <: Entity
@@ -189,8 +201,12 @@ function extract!(requirements::Dict{B,Int64}, source::Entities, max::Int = INF)
 
         if res_available
             for bp in keys(requirements)
-                for i in range(1, length = requirements[bp])
-                    pop!(source, bp)
+                for i in range(requirements[bp], length = requirements[bp], step = -1)
+                    use!(source[bp][i])
+
+                    if health(source[bp][i]) == 0
+                        deleteat!(source, bp, i)
+                    end
                 end
             end
 

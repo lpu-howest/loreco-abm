@@ -92,6 +92,36 @@ end
 @testset "Entities" begin
     e = Entities()
     cb = ConsumableBlueprint("Consumable")
+    r = Restorable(wear = 0.1)
+    pb = ProductBlueprint("Product", r)
     c = Consumable(cb)
+    p1 = Product(pb)
+    p2 = Product(pb)
     push!(e, c)
+    push!(e, p1)
+    push!(e, p2)
+    @test length(e[cb]) == 1
+    @test length(e[pb]) == 2
+    use!(e[pb][1])
+    @test health(e[pb][1]) == 0.9
+end
+
+@testset "extract!" begin
+    e = Entities()
+    cb = ConsumableBlueprint("Consumable")
+    r = Restorable(wear = 0.1)
+    pb = ProductBlueprint("Product", r)
+    c = Consumable(cb)
+    p1 = Product(pb)
+    p1.lifecycle.health.current = 0.1
+    @test health(p1) == 0.1
+    p2 = Product(pb)
+    push!(e, c)
+    push!(e, p1)
+    push!(e, p2)
+    req = Dict(cb => 1, pb => 2)
+    @test Production.extract!(req, e) == 1
+    @test length(keys(e)) == 1
+    @test !(cb in keys(e))
+    @test health(e[pb][end]) == 0.9
 end
