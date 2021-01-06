@@ -71,19 +71,22 @@ end
 
 @testset "Producer" begin
     labour_bp = ConsumableBlueprint("Labour")
+    machine_bp = ProductBlueprint("Machine", Restorable(wear = 0.1))
     food_bp = ConsumableBlueprint("Food")
     factory_bp = ProducerBlueprint(
         "Factory",
-        batch_req = Dict(labour_bp => 2),
+        batch_req = Dict(labour_bp => 2, machine_bp => 1),
         batch = Dict(food_bp => 1)
     )
 
-    labour = Entities(Dict(labour_bp => [Consumable(labour_bp), Consumable(labour_bp)]))
+    resources = Entities(Dict{Blueprint,Vector{Entity}}(labour_bp => [Consumable(labour_bp), Consumable(labour_bp)], machine_bp => [Product(machine_bp)]))
     factory = Producer(factory_bp)
 
-    products = produce!(factory, labour)
+    products = produce!(factory, resources)
 
-    @test !(labour_bp in keys(labour))
+    @test !(labour_bp in keys(resources))
+    @test machine_bp in keys(resources)
+    @test health(resources[machine_bp][1]) == 0.9
     @test length(products[food_bp]) == 1
     @test get_name(products[food_bp][1]) == "Food"
     @test typeof(products[food_bp][1]) == Consumable
@@ -92,8 +95,7 @@ end
 @testset "Entities" begin
     e = Entities()
     cb = ConsumableBlueprint("Consumable")
-    r = Restorable(wear = 0.1)
-    pb = ProductBlueprint("Product", r)
+    pb = ProductBlueprint("Product", Restorable(wear = 0.1))
     c = Consumable(cb)
     p1 = Product(pb)
     p2 = Product(pb)
@@ -109,8 +111,7 @@ end
 @testset "extract!" begin
     e = Entities()
     cb = ConsumableBlueprint("Consumable")
-    r = Restorable(wear = 0.1)
-    pb = ProductBlueprint("Product", r)
+    pb = ProductBlueprint("Product", Restorable(wear = 0.1))
     c = Consumable(cb)
     p1 = Product(pb)
     p1.lifecycle.health.current = 0.1
