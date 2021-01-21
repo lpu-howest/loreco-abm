@@ -44,7 +44,7 @@ struct ProducerBlueprint <: Blueprint
     restore_res::Dict{<:Blueprint,Int64}
     restore::Float64
     batch_req::Dict{<:Blueprint,Int64} # Required input per batch
-    batch::Dict{<:Blueprint,Int64} # batch per batch. The Blueprint and the number of items per blueprint.
+    batch::Dict{<:Blueprint,Int64} # output per batch. The Blueprint and the number of items per blueprint.
     max_production::Int64 # Max number of batches per production cycle
 
     ProducerBlueprint(
