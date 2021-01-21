@@ -1,6 +1,5 @@
 using Main.Types
-
-include("balance.jl")
+export SUMSY_DEP
 
 SUMSY_DEP = BalanceEntry("SuMSy deposit")
 
@@ -29,7 +28,7 @@ end
 
 Create a SuMSy struct with 1 demurrage tier.
 """
-function SuMSy(guaranteed_income::BigFloat, dem_free_buffer::BigFloat, dem::Percentage)
+function SuMSy(guaranteed_income::Real, dem_free_buffer::Real, dem::Percentage)
     return SuMSy(guaranteed_income, dem_free_buffer, [(dem_free_buffer, dem)])
 end
 
@@ -53,7 +52,7 @@ function calculate_demurrage(sumsy::SuMSy, balance::Balance, cur_time::Int)
         while i > 0 && tranactions[i][1] == t_time
             t = transactions[i]
 
-            if t[2] == asset and t[3] == SUMSY_DEP
+            if t[2] == asset && t[3] == SUMSY_DEP
                 amount += t[4]
             end
 

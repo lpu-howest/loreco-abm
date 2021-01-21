@@ -2,10 +2,6 @@ using UUIDs
 
 import Base: ==
 
-export EntryType, BalanceEntry, Balance, EQUITY
-export validate, asset, liability, assets, liabilities, asset_value, assets_value, liability_value, liabilities_value, liabilities_net_value, equity
-export book_asset!, book_liability!, transfer!, transfer_asset!, transfer_liability!
-
 @enum EntryType asset liability
 
 struct BalanceEntry
@@ -30,7 +26,7 @@ A balance sheet, including a history of transactions which led to the current st
 """
 struct Balance
     balance::Dict{EntryType, Dict{BalanceEntry, BigFloat}}
-    transactions::Vector{Tuple{Int64, Entrytype, BalanceEntry, BigFloat}}
+    transactions::Vector{Tuple{Int64, EntryType, BalanceEntry, BigFloat}}
     Balance() = new(Dict(asset => Dict{BalanceEntry, BigFloat}(), liability => Dict{BalanceEntry, BigFloat}(EQUITY => 0)))
 end
 

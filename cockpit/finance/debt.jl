@@ -1,8 +1,6 @@
-include("balance.jl")
-
 using UUIDs
 
-DEPOSIT = BalanceENtry("Deposit")
+DEPOSIT = BalanceEntry("Deposit")
 DEBT = BalanceEntry("Debt")
 
 """
@@ -25,8 +23,8 @@ mutable struct Debt
     id::UUID
     creditor::Balance
     debtor::Balance
-    interest_rate::BigFloat
     installments::Vector{BigFloat}
+    interest_rate::BigFloat
     bank_debt::Bool
     money_entry::BalanceEntry
     debt_entry::BalanceEntry
@@ -34,8 +32,8 @@ mutable struct Debt
     interval::Int64
     Debt(creditor::Balance,
         debtor::Balance,
-        interest_rate::BigFloat = 0,
-        installments::Vector{BigFloat};
+        installments::Vector{BigFloat},
+        interest_rate::BigFloat = 0;
         bank_debt::Bool = true,
         money_entry::BalanceEntry = DEPOSIT,
         debt_entry::BalanceEntry = DEBT,
@@ -43,8 +41,8 @@ mutable struct Debt
         interval = 0) = new(uuid4(),
             creditor,
             debtor,
-            interest_rate,
             installments,
+            interest_rate,
             bank_debt,
             money_entry,
             debt_entry,
@@ -166,6 +164,7 @@ function process_debt!(debt::Debt)
         book_liability!(debt.creditor, debt.money_entry, -(installment + interest))
     else
         book_asset!(debt.creditor, debt.money_entry, installment + interest)
+    end
 
     book_asset!(debt.creditor, DEBT, -installment)
 
