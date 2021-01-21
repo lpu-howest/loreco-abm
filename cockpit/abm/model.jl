@@ -31,7 +31,7 @@ end
 
 function Person(production::Vector{Producer},
             needs::Dict{Blueprint, Vector{Tuple{Int, Percentage}}})
-    for need keys(needs)
+    for need in keys(needs)
         sort(needs[need])
     end
 
@@ -109,8 +109,8 @@ function get_desires(person::Person)
     return desires
 end
 
-DEFAULT_PROPERTIES = Dict(:SUMSY => SuMSy(1, 1, 0.1))
-MODEL = ABM(Person)
+#DEFAULT_PROPERTIES = Dict(:SUMSY => SuMSy(BigFloat(1), BigFloat(1), 0.1))
+#MODEL = ABM(Person)
 
 function agent_step!(agent, model)
 end
