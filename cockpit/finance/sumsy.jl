@@ -28,7 +28,7 @@ end
 
 Create a SuMSy struct with 1 demurrage tier.
 """
-function SuMSy(guaranteed_income::Real, dem_free_buffer::Real, dem::Percentage)
+function SuMSy(guaranteed_income::BigFloat, dem_free_buffer::BigFloat, dem::Percentage)
     return SuMSy(guaranteed_income, dem_free_buffer, [(dem_free_buffer, dem)])
 end
 
