@@ -1,5 +1,7 @@
 module Finance
 
-include("bank.jl")
+include("balance.jl")
+include("sumsy.jl")
+include("debt.jl")
 
 end
