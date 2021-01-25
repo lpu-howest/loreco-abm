@@ -109,7 +109,7 @@ function get_desires(person::Person)
     return desires
 end
 
-#DEFAULT_PROPERTIES = Dict(:SUMSY => SuMSy(BigFloat(1), BigFloat(1), 0.1))
+DEFAULT_PROPERTIES = Dict(:SUMSY => SuMSy(1, 1, 0.1, 1))
 #MODEL = ABM(Person)
 
 function agent_step!(agent, model)
