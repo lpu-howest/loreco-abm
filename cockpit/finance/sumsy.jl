@@ -20,7 +20,7 @@ mutable struct SuMSy
     dem_tiers::Vector{Tuple{BigFloat, Percentage}}
     interval::Int64
     seed::BigFloat
-    SuMSy(guaranteed_income::BigFloat, dem_free_buffer::BigFloat, dem_tiers::Vector{Percentage}, interval::Int64; seed::BigFloat = 0) = new(guaranteed_income, dem_free_buffer, sort(dem_tiers), interval, seed)
+    SuMSy(guaranteed_income::Real, dem_free_buffer::Real, dem_tiers::Vector{Tuple{Real, Real}}, interval::Integer; seed::Real = 0) = new(guaranteed_income, dem_free_buffer, sort(Vector{Tuple{BigFloat, Percentage}}(dem_tiers)), interval, seed)
 end
 
 """
@@ -28,8 +28,8 @@ end
 
 Create a SuMSy struct with 1 demurrage tier.
 """
-function SuMSy(guaranteed_income::BigFloat, dem_free_buffer::BigFloat, dem::Percentage)
-    return SuMSy(guaranteed_income, dem_free_buffer, [(dem_free_buffer, dem)])
+function SuMSy(guaranteed_income::Real, dem_free_buffer::Real, dem::Real, interval::Integer; seed::Real = 0)
+    return SuMSy(guaranteed_income, dem_free_buffer, Vector{Tuple{Real, Real}}([(dem_free_buffer, dem)]), interval, seed = seed)
 end
 
 """
