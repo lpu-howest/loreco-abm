@@ -34,8 +34,8 @@ end
 Base.show(io::IO, b::Balance) = print(io, "Balance(Assets: $(b.balance[asset]), Liabilities: $(b.balance[liability]))")
 
 validate(b::Balance) = sum(values(b.balance[asset])) == sum(values(b.balance[liability]))
-asset_value(b::Balance, entry::BalanceEntry) = value(b.balance[asset], entry)
-liability_value(b::Balance, entry::BalanceEntry) = value(b.balance[liability], entry)
+asset_value(b::Balance, entry::BalanceEntry) = entry_value(b.balance[asset], entry)
+liability_value(b::Balance, entry::BalanceEntry) = entry_value(b.balance[liability], entry)
 assets(b::Balance) = collect(keys(b.balance[asset]))
 liabilities(b::Balance) = collect(keys(b.balance[liability]))
 assets_value(b::Balance) = sum(values(b.balance[asset]))
@@ -43,7 +43,7 @@ liabilities_value(b::Balance) = sum(values(b.balance[liability]))
 liabilities_net_value(b::Balance) = liabilities_value(b) - equity(b)
 equity(b::Balance) = b.balance[liability][EQUITY]
 
-function value(dict::Dict{BalanceEntry, BigFloat}, entry::BalanceEntry)
+function entry_value(dict::Dict{BalanceEntry, BigFloat}, entry::BalanceEntry)
     if entry in keys(dict)
         return dict[entry]
     else
