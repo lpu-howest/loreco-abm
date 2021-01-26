@@ -68,11 +68,12 @@ As long as the check for acquisition results in a desire to acquire an extra uni
 
 # Example:
 Given a Person with the following NeedFulfillment and no posessions:
-(Blueprint("A") => [(1, 1.0), (3, 0.5), (5, 0.0)])
+(Blueprint("A") => [(2, 1.0), (5, 0.5)])
 
-The probability for attemptoing to acquire the first unit is 100%.
+Tuples denote a number of units and the probability to desire another one if the person has less than the indicated number.
+In the example above the probability for attemptoing to acquire the first unit is 100% if the person posesses no units.
 A check for acquiring a second unit is executed and since the probability for this is also 100%, a check for acquiring a third unit is executed.
-The probability for a third unit is 50%. If this check results in the attempt to acquire a third unit, a check for acquiring a fourth unit will be made and so on.
+The probability for a third unit is 50% (the agent now posesses 2 units thus the next tuple is used). If this check results in the attempt to acquire a third unit, a check for acquiring a fourth unit will be made and so on.
 Once 5 units are in posession the check will always be negative in this example and therefor the maximum number of units desired is 5.
 """
 function get_desire(person::Person, bp::Blueprint)
@@ -85,11 +86,11 @@ function get_desire(person::Person, bp::Blueprint)
     while acquire
         i = 1
 
-        while i < length(needs_pattern) && cur_posessions + acquisitions > needs_pattern[i][1]
+        while i < length(needs_pattern) && cur_posessions + acquisitions >= needs_pattern[i][1]
             i += 1
         end
 
-        acquire = rand() < needs_pattern[i][2]
+        acquire = cur_posessions + acquisitions < needs_pattern[i][1] && rand() <= needs_pattern[i][2]
 
         if acquire
             acquisitions += 1
