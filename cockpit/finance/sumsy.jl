@@ -47,17 +47,17 @@ Calculates the demurrage due at the current timestamp. This is not restricted to
 function calculate_demurrage(sumsy::SuMSy, balance::Balance, step::Int)
     transactions = balance.transactions
     cur_balance = asset_value(balance, SUMSY_DEP)
-    period = mod(step, sumsy.interval)
+    period = mod(step, sumsy.interval) == 0 ? sumsy.interval : mod(step, sumsy.interval) == 0
     period_start = step - period
     weighted_balance = 0
     i = length(transactions)
     t_step = step
 
     while i > 0 && transactions[i][1] >= period_start
-        t_step = transaction[i][1]
+        t_step = transactions[i][1]
         amount = 0
 
-        while i > 0 && tranactions[i][1] == t_step
+        while i > 0 && transactions[i][1] == t_step
             t = transactions[i]
 
             if t[2] == asset && t[3] == SUMSY_DEP
@@ -86,7 +86,7 @@ function calculate_demurrage(sumsy::SuMSy, balance::Balance, step::Int)
         i -= 1
 
         if avg_balance > tier[1]
-            demurrage += (avg_balance - tier[1]) * tier[2]
+            demurrage += (avg_balance - tier[1]) * value(tier[2])
             avg_balance = tier[1]
         end
     end
@@ -103,20 +103,20 @@ Processes demurrage and guaranteed income if the timestamp is a multiple of the 
 * balance: the balance on which to apply SuMSy.
 * timestamp: the current timestamp. Used to determine whether action needs to be taken.
 """
-function process_sumsy!(sumsy::SuMSy, balance::Balance, cur_time::Int)
+function process_sumsy!(sumsy::SuMSy, balance::Balance, step::Int)
     income = 0
     demurrage = 0
 
-    if mod(cur_time, sumsy.interval) == 0
-        if cur_time == 0
+    if mod(step, sumsy.interval) == 0
+        if step == 0
             income += sumsy.seed
         end
 
         income += sumsy.guaranteed_income
-        demurrage = calculate_demurrage(sumsy, balance, cur_time)
+        demurrage = calculate_demurrage(sumsy, balance, step)
 
-        book_asset!(balance, SUMSY_DEP, income, cur_time)
-        book_asset!(balance, SUMSY_DEP, demurrage, cur_time)
+        book_asset!(balance, SUMSY_DEP, income, step)
+        book_asset!(balance, SUMSY_DEP, -demurrage, step)
     end
 
     return income, demurrage
