@@ -6,7 +6,9 @@ export validate, asset, liability, assets, liabilities, asset_value, assets_valu
 export book_asset!, book_liability!, transfer!, transfer_asset!, transfer_liability!
 
 include("sumsy.jl")
-export SuMSy, calculate_demurrage, process_sumsy!, sumsy_transfer
+export SUMSY_DEP
+export SuMSy
+export calculate_demurrage, process_sumsy!, sumsy_balance, sumsy_transfer!
 
 include("debt.jl")
 export DEPOSIT, DEBT

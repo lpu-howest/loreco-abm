@@ -74,3 +74,32 @@ end
     @test asset_value(b2, d) == 3
     @test liability_value(b2, d) == 2
 end
+
+@testset "Transactions" begin
+    b1 = Balance()
+    b2 = Balance()
+    a = BalanceEntry("Asset")
+
+    book_asset!(b1, a, 100)
+    transfer_asset!(b1, b2, a, 50)
+
+    @test length(b1.transactions) == 2
+    @test b1.transactions[1][1] == 0
+    @test b1.transactions[1][2] == asset
+    @test b1.transactions[1][3] == a
+    @test b1.transactions[1][4] == 100
+    @test b1.transactions[2][1] == 0
+    @test b1.transactions[2][2] == asset
+    @test b1.transactions[2][3] == a
+    @test b1.transactions[2][4] == -50
+
+    @test length(b2.transactions) == 1
+    @test b2.transactions[1][1] == 0
+    @test b2.transactions[1][2] == asset
+    @test b2.transactions[1][3] == a
+    @test b2.transactions[1][4] == 50
+end
+
+@testset "SuMSy" begin
+    sumsy = SuMSy(2000, [(10, 50000), (20, 100000)], 10, seed = 10000)
+end

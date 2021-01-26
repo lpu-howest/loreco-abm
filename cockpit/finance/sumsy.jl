@@ -1,5 +1,4 @@
 using Main.Types
-export SUMSY_DEP
 
 SUMSY_DEP = BalanceEntry("SuMSy deposit")
 
@@ -9,18 +8,22 @@ SUMSY_DEP = BalanceEntry("SuMSy deposit")
 Representation of the parameters of a SuMSy implementation.
 
 * guaranteed_income: the periodical guaranteed income.
-* dem_free_buffer: the size of the demurrage free buffer.
 * dem_tiers: the demurrage tiers. This is a list of tuples consisting of a lower bound and a demurrage percantage. The demurrage percentage is applied to the amounts larger than the lower bound up to the the next higher lower bound.
 * interval: the size of the period after which the next demurrage is calculated and the next guaranteed income is issued.
 * seed: the amount whith which new accounts start.
 """
 mutable struct SuMSy
     guaranteed_income::BigFloat
-    dem_free_buffer::BigFloat
     dem_tiers::Vector{Tuple{BigFloat, Percentage}}
     interval::Int64
     seed::BigFloat
-    SuMSy(guaranteed_income::Real, dem_free_buffer::Real, dem_tiers::Vector{Tuple{Real, Real}}, interval::Integer; seed::Real = 0) = new(guaranteed_income, dem_free_buffer, sort(Vector{Tuple{BigFloat, Percentage}}(dem_tiers)), interval, seed)
+    SuMSy(guaranteed_income::Real,
+        dem_tiers::Vector{Tuple{T1, T2}},
+        interval::Integer;
+        seed::Real = 0) where {T1, T2 <: Real} = new(guaranteed_income,
+                        sort(Vector{Tuple{BigFloat, Percentage}}(dem_tiers)),
+                        interval,
+                        seed)
 end
 
 """
@@ -28,8 +31,12 @@ end
 
 Create a SuMSy struct with 1 demurrage tier.
 """
-function SuMSy(guaranteed_income::Real, dem_free_buffer::Real, dem::Real, interval::Integer; seed::Real = 0)
-    return SuMSy(guaranteed_income, dem_free_buffer, Vector{Tuple{Real, Real}}([(dem_free_buffer, dem)]), interval, seed = seed)
+function SuMSy(guaranteed_income::Real,
+            dem_free_buffer::Real,
+            dem::Real,
+            interval::Integer;
+            seed::Real = 0)
+    return SuMSy(guaranteed_income, Vector{Tuple{Real, Real}}([(dem_free_buffer, dem)]), interval, seed = seed)
 end
 
 """
@@ -37,19 +44,20 @@ end
 
 Calculates the demurrage due at the current timestamp. This is not restricted to timestamps which correspond to multiples of the SuMSy interval.
 """
-function calculate_demurrage(sumsy::SuMSy, balance::Balance, cur_time::Int)
+function calculate_demurrage(sumsy::SuMSy, balance::Balance, step::Int)
     transactions = balance.transactions
     cur_balance = asset_value(balance, SUMSY_DEP)
-    period = mod(timestamp, sumsy.interval)
-    period_start = cur_time - period
+    period = mod(step, sumsy.interval)
+    period_start = step - period
     weighted_balance = 0
     i = length(transactions)
+    t_step = step
 
     while i > 0 && transactions[i][1] >= period_start
-        t_time = transaction[i][1]
+        t_step = transaction[i][1]
         amount = 0
 
-        while i > 0 && tranactions[i][1] == t_time
+        while i > 0 && tranactions[i][1] == t_step
             t = transactions[i]
 
             if t[2] == asset && t[3] == SUMSY_DEP
@@ -59,12 +67,13 @@ function calculate_demurrage(sumsy::SuMSy, balance::Balance, cur_time::Int)
             i -= 1
         end
 
-        weighted_balance += (cur_time - t_time) * cur_balance
+        weighted_balance += (step - t_step) * cur_balance
+        step = t_step
         cur_balance -= amount
     end
 
-    if t_time > period_start
-        weighted_balance += (t_time - period_start) * cur_balance
+    if t_step > period_start
+        weighted_balance += (t_step - period_start) * cur_balance
     end
 
     avg_balance = weighted_balance / period
@@ -113,12 +122,16 @@ function process_sumsy!(sumsy::SuMSy, balance::Balance, cur_time::Int)
     return income, demurrage
 end
 
+function sumsy_balance(balance)
+    return asset_value(balance, SUMSY_DEP)
+end
+
 """
     sumsy_transfer(source::Balance, destination::Balance, amount::BigFloat)
 
 Transfer an amount of SuMSy money from one balance sheet to another. No more than the available amount of money can e transferred.
 """
-function sumsy_transfer(source::Balance, destination::Balance, amount::BigFloat, timestamp::Int = 0)
+function sumsy_transfer!(source::Balance, destination::Balance, amount::Real, timestamp::Int = 0)
     amount = max(0, min(amount, asset_value(source, SUMSY_DEP)))
     transfer_asset!(source, destination, SUMSY_DEP, amount, timestamp)
 end

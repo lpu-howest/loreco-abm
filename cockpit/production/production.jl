@@ -1,7 +1,6 @@
 module Production
 
 include("entities.jl")
-
 export Direction, down, up
 export Lifecycle, SingleUse, Restorable
 export Identity
