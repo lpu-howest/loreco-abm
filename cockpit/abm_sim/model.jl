@@ -117,7 +117,7 @@ function agent_step!(agent, model)
         target = random_agent(model)
     end
 
-    amount = round(rand(), digits = 2) * sumsy_balance(agent.balance) / 10
+    amount = round(rand() * sumsy_balance(agent.balance) / 10, digits = 2)
     sumsy_transfer!(agent.balance, target.balance, amount, model.step)
 end
 
