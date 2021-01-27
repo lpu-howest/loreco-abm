@@ -38,7 +38,7 @@ for type in (Percentage, Health)
 
     for op in (:*, :/)
         eval(quote
-            Base.$op(x::$type, y::$type) = $op(value(x), value(y))
+            Base.$op(x::$type, y::$type) = $type($op(value(x), value(y)))
             Base.$op(x::$type, y::Real) = $op(value(x), y)
             Base.$op(x::Real, y::$type) = $op(x, value(y))
         end)
