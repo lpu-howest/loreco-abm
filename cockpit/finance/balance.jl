@@ -24,14 +24,34 @@ A balance sheet, including a history of transactions which led to the current st
 
 * balance: the balance sheet.
 * transactions: a chronological list of transaction tuples. Each tuple is constructed as follows: timestamp, entry type (asset or liability), balance entry, amount.
+* properties: a dict with user defined properties. If the key of the dict is a Symbol, the value can be retrieved/set by balance.symbol.
 """
 struct Balance
     balance::Dict{EntryType, Dict{BalanceEntry, BigFloat}}
     transactions::Vector{Tuple{Int64, EntryType, BalanceEntry, BigFloat}}
-    Balance() = new(Dict(asset => Dict{BalanceEntry, BigFloat}(), liability => Dict{BalanceEntry, BigFloat}(EQUITY => 0)), Vector{Tuple{Int64, EntryType, BalanceEntry, BigFloat}}())
+    properties::Dict
+    Balance(;properties = Dict()) = new(Dict(asset => Dict{BalanceEntry, BigFloat}(), liability => Dict{BalanceEntry, BigFloat}(EQUITY => 0)), Vector{Tuple{Int64, EntryType, BalanceEntry, BigFloat}}(), properties)
 end
 
 Base.show(io::IO, b::Balance) = print(io, "Balance(Assets: $(b.balance[asset]), Liabilities: $(b.balance[liability]))")
+
+function Base.getproperty(balance::Balance, s::Symbol)
+    if s in keys(balance.properties)
+        return balance.properties[s]
+    else
+        return getfield(balance, s)
+    end
+end
+
+function Base.setproperty!(balance::Balance, s::Symbol, value)
+    if s in fieldnames(Balance)
+        setfield!(balance, s, value)
+    else
+        balance.properties[s] = value
+    end
+
+    return value
+end
 
 validate(b::Balance) = sum(values(b.balance[asset])) == sum(values(b.balance[liability]))
 asset_value(b::Balance, entry::BalanceEntry) = entry_value(b.balance[asset], entry)
