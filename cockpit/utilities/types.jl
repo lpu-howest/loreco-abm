@@ -28,11 +28,19 @@ value(x::Health) = value(x.current)
 import Base: +, -, *, /, <, >, <=, >=, ==, max, min
 
 for type in (Percentage, Health)
-    for op in (:+, :-, :*, :/, :max, :min)
+    for op in (:+, :-, :max, :min)
         eval(quote
             Base.$op(x::$type, y::$type) = $type($op(value(x), value(y)))
             Base.$op(x::$type, y::Real) = $type($op(value(x), y))
             Base.$op(x::Real, y::$type) = $type($op(x, value(y)))
+        end)
+    end
+
+    for op in (:*, :/)
+        eval(quote
+            Base.$op(x::$type, y::$type) = $op(value(x), value(y))
+            Base.$op(x::$type, y::Real) = $op(value(x), y)
+            Base.$op(x::Real, y::$type) = $op(x, value(y))
         end)
     end
 
