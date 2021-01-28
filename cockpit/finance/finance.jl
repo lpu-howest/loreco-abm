@@ -10,6 +10,7 @@ include("sumsy.jl")
 export SUMSY_DEP
 export SuMSy
 export calculate_demurrage, process_sumsy!, sumsy_balance, sumsy_transfer!
+export set_guaranteed_income!, has_guaranteed_income, dem_free, transfer_dem_free
 
 include("debt.jl")
 export DEPOSIT, DEBT
