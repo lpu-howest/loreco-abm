@@ -59,4 +59,10 @@ for type in (Percentage, Health)
     end)
 end
 
+*(x::Health, y::Percentage) = Health(round(value(x) * value(y), digits = 6))
+*(x::Percentage, y::Health) = Health(round(value(x) * value(y), digits = 6))
+
+/(x::Health, y::Percentage) = Health(round(value(x) / value(y), digits = 6))
+/(x::Percentage, y::Health) = Health(round(value(x) / value(y), digits = 6))
+
 end
