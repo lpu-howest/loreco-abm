@@ -80,26 +80,40 @@ end
     b2 = Balance()
     a = BalanceEntry("Asset")
 
-    book_asset!(b1, a, 100)
-    transfer_asset!(b1, b2, a, 50)
+    book_asset!(b1, a, 100, comment = "book")
+    transfer_asset!(b1, b2, a, 50, comment = "transfer")
 
     @test length(b1.transactions) == 2
     @test b1.transactions[1][1] == 0
     @test b1.transactions[1][2] == asset
     @test b1.transactions[1][3] == a
     @test b1.transactions[1][4] == 100
+    @test b1.transactions[1][5] == "book"
     @test b1.transactions[2][1] == 0
     @test b1.transactions[2][2] == asset
     @test b1.transactions[2][3] == a
     @test b1.transactions[2][4] == -50
+    @test b1.transactions[2][5] == "transfer"
 
     @test length(b2.transactions) == 1
     @test b2.transactions[1][1] == 0
     @test b2.transactions[1][2] == asset
     @test b2.transactions[1][3] == a
     @test b2.transactions[1][4] == 50
+    @test b2.transactions[1][5] == "transfer"
 end
 
-@testset "SuMSy" begin
-    sumsy = SuMSy(2000, [(10, 50000), (20, 100000)], 10, seed = 10000)
+@testset "SuMSy demurrage" begin
+    sumsy = SuMSy(2000, 50000, [(50000, 0.1), (100000, 0.2), (200000, 0.5)], 10)
+    balance = Balance()
+
+    @test !has_guaranteed_income(balance)
+    @test dem_free(balance) == 0
+
+    set_guaranteed_income!(sumsy, balance, true)
+    book_asset!(balance, SUMSY_DEP, 160000, 0)
+
+    @test has_guaranteed_income(balance)
+    @test dem_free(balance) == 50000
+    @test calculate_demurrage(sumsy, balance, 10) == 20000
 end
