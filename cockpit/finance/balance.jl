@@ -23,23 +23,27 @@ Base.show(io::IO, entry::BalanceEntry) = print(io, "BalanceEntry($(entry.name))"
 A balance sheet, including a history of transactions which led to the current state of the balance sheet.
 
 * balance: the balance sheet.
-* transactions: a chronological list of transaction tuples. Each tuple is constructed as follows: timestamp, entry type (asset or liability), balance entry, amount.
+* transactions: a chronological list of transaction tuples. Each tuple is constructed as follows: timestamp, entry type (asset or liability), balance entry, amount, comment.
 * properties: a dict with user defined properties. If the key of the dict is a Symbol, the value can be retrieved/set by balance.symbol.
 """
 struct Balance
     balance::Dict{EntryType, Dict{BalanceEntry, BigFloat}}
-    transactions::Vector{Tuple{Int64, EntryType, BalanceEntry, BigFloat}}
+    transactions::Vector{Tuple{Int64, EntryType, BalanceEntry, BigFloat, String}}
     properties::Dict
     Balance(;properties = Dict()) = new(Dict(asset => Dict{BalanceEntry, BigFloat}(), liability => Dict{BalanceEntry, BigFloat}(EQUITY => 0)), Vector{Tuple{Int64, EntryType, BalanceEntry, BigFloat}}(), properties)
 end
 
-Base.show(io::IO, b::Balance) = print(io, "Balance(Assets: $(b.balance[asset]), Liabilities: $(b.balance[liability]))")
+Base.show(io::IO, b::Balance) = print(io, "Balance(\nAssets:\n$(b.balance[asset]) \nLiabilities:\n$(b.balance[liability]) \nTransactions:\n$(b.transactions))")
 
 function Base.getproperty(balance::Balance, s::Symbol)
-    if s in keys(balance.properties)
-        return balance.properties[s]
-    else
+    properties = getfield(balance, :properties)
+
+    if s in keys(properties)
+        return properties[s]
+    elseif s in fieldnames(Balance)
         return getfield(balance, s)
+    else
+        return nothing
     end
 end
 
@@ -79,34 +83,34 @@ function book_amount!(entry::BalanceEntry, dict::Dict{BalanceEntry, BigFloat}, a
     end
 end
 
-function book_asset!(b::Balance, entry::BalanceEntry, amount::Real, timestamp::Int = 0)
+function book_asset!(b::Balance, entry::BalanceEntry, amount::Real, timestamp::Int = 0; comment = "")
     book_amount!(entry, b.balance[asset], amount)
     book_amount!(EQUITY, b.balance[liability], amount)
-    push!(b.transactions, (timestamp, asset, entry, amount))
+    push!(b.transactions, (timestamp, asset, entry, amount, comment))
     return asset_value(b, entry)
 end
 
-function book_liability!(b::Balance, entry::BalanceEntry, amount::Real, timestamp::Int = 0)
+function book_liability!(b::Balance, entry::BalanceEntry, amount::Real, timestamp::Int = 0; comment = "")
     book_amount!(entry, b.balance[liability], amount)
     book_amount!(EQUITY, b.balance[liability], -amount)
-    push!(b.transactions, (timestamp, liability, entry, amount))
+    push!(b.transactions, (timestamp, liability, entry, amount, comment))
     return liability_value(b, entry)
 end
 
 transfer_functions = Dict(asset => book_asset!, liability => book_liability!)
 value_functions = Dict(asset => asset_value, liability => liability_value)
 
-function transfer!(b1::Balance, type1::EntryType, b2::Balance, type2::EntryType, entry::BalanceEntry, amount::Real, timestamp::Int = 0)
-    transfer_functions[type1](b1, entry, -amount, timestamp)
-    transfer_functions[type2](b2, entry, amount, timestamp)
+function transfer!(b1::Balance, type1::EntryType, b2::Balance, type2::EntryType, entry::BalanceEntry, amount::Real, timestamp::Int = 0; comment = "")
+    transfer_functions[type1](b1, entry, -amount, timestamp, comment = comment)
+    transfer_functions[type2](b2, entry, amount, timestamp, comment = comment)
 
     return value_functions[type1](b1, entry), value_functions[type2](b2, entry)
 end
 
-function transfer_asset!(b1::Balance, b2::Balance, entry::BalanceEntry, amount::Real, timestamp::Int = 0)
-    transfer!(b1, asset, b2, asset, entry, amount, timestamp)
+function transfer_asset!(b1::Balance, b2::Balance, entry::BalanceEntry, amount::Real, timestamp::Int = 0; comment = "")
+    transfer!(b1, asset, b2, asset, entry, amount, timestamp, comment = comment)
 end
 
-function transfer_liability!(b1::Balance, b2::Balance, entry::BalanceEntry, amount::Real, timestamp::Int = 0)
-    transfer!(b1, liability, b2, liability, entry, amount, timestamp)
+function transfer_liability!(b1::Balance, b2::Balance, entry::BalanceEntry, amount::Real, timestamp::Int = 0; comment = "")
+    transfer!(b1, liability, b2, liability, entry, amount, timestamp, comment = comment)
 end
