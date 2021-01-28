@@ -8,20 +8,24 @@ SUMSY_DEP = BalanceEntry("SuMSy deposit")
 Representation of the parameters of a SuMSy implementation.
 
 * guaranteed_income: the periodical guaranteed income.
-* dem_tiers: the demurrage tiers. This is a list of tuples consisting of a lower bound and a demurrage percantage. The demurrage percentage is applied to the amounts larger than the lower bound up to the the next higher lower bound.
+* dem_free_buffer: the demurrage free buffer which is allocated to all accounts which have a right to a guaranteed income.
+* dem_tiers: the demurrage tiers. This is a list of tuples consisting of an upper bound and a demurrage percantage. The demurrage percentage is applied to the amounts below the upper bound down to the the next lower upper bound. If the demurrage free buffer of an account is larger than 0, all bounds are shifted up with this amount and no demurrage is applied to the amount up to the available demurrage free buffer.
 * interval: the size of the period after which the next demurrage is calculated and the next guaranteed income is issued.
 * seed: the amount whith which new accounts start.
 """
 mutable struct SuMSy
     guaranteed_income::BigFloat
+    dem_free::BigFloat
     dem_tiers::Vector{Tuple{BigFloat, Percentage}}
     interval::Int64
     seed::BigFloat
     SuMSy(guaranteed_income::Real,
-        dem_tiers::Vector{Tuple{T1, T2}},
+        dem_free::Real,
+        dem_tiers::Vector{T},
         interval::Integer;
-        seed::Real = 0) where {T1, T2 <: Real} = new(guaranteed_income,
-                        sort(Vector{Tuple{BigFloat, Percentage}}(dem_tiers)),
+        seed::Real = 0) where {T <: Tuple{Real, Real}} = new(guaranteed_income,
+                        dem_free,
+                        sort(dem_tiers),
                         interval,
                         seed)
 end
@@ -32,11 +36,11 @@ end
 Create a SuMSy struct with 1 demurrage tier.
 """
 function SuMSy(guaranteed_income::Real,
-            dem_free_buffer::Real,
+            dem_free::Real,
             dem::Real,
             interval::Integer;
             seed::Real = 0)
-    return SuMSy(guaranteed_income, Vector{Tuple{Real, Real}}([(dem_free_buffer, dem)]), interval, seed = seed)
+    return SuMSy(guaranteed_income, dem_free, [(0, dem)], interval, seed = seed)
 end
 
 """
@@ -76,19 +80,15 @@ function calculate_demurrage(sumsy::SuMSy, balance::Balance, step::Int)
         weighted_balance += (t_step - period_start) * cur_balance
     end
 
-    avg_balance = weighted_balance / period
+    avg_balance = weighted_balance / period - dem_free(balance)
+
     demurrage = 0
     dem_tiers = sumsy.dem_tiers
-    i = length(dem_tiers)
+    lower_bound = 0
 
-    while i > 0
-        tier = dem_tiers[i]
-        i -= 1
-
-        if avg_balance > tier[1]
-            demurrage += (avg_balance - tier[1]) * value(tier[2])
-            avg_balance = tier[1]
-        end
+    for tier in dem_tiers
+        demurrage += round(min(avg_balance - lower_bound, tier[1] - lower_bound) * tier[2], digits = 2)
+        lower_bound = tier[1]
     end
 
     return demurrage
@@ -108,15 +108,18 @@ function process_sumsy!(sumsy::SuMSy, balance::Balance, step::Int)
     demurrage = 0
 
     if mod(step, sumsy.interval) == 0
-        if step == 0
-            income += sumsy.seed
+        if has_guaranteed_income(balance)
+            if step == 0
+                income += sumsy.seed
+            end
+
+            income += sumsy.guaranteed_income
         end
 
-        income += sumsy.guaranteed_income
         demurrage = calculate_demurrage(sumsy, balance, step)
 
-        book_asset!(balance, SUMSY_DEP, income, step)
-        book_asset!(balance, SUMSY_DEP, -demurrage, step)
+        book_asset!(balance, SUMSY_DEP, income, step, comment = "Guaranteed income")
+        book_asset!(balance, SUMSY_DEP, -demurrage, step, comment = "Demurrage")
     end
 
     return income, demurrage
@@ -127,6 +130,37 @@ function sumsy_balance(balance)
 end
 
 """
+    set_guaranteed_income(sumsy::SuMSy, balance::Balance, flag::Bool)
+
+Indicate whether a balance is ellegible to receive a guaranteed income or not. If this is set to true, a demurrage free amount, equal to what is defined in the SuMSy struct, is also assigned to the balance, otherwise the demurrage free buffer is set to 0.
+"""
+function set_guaranteed_income!(sumsy::SuMSy, balance::Balance, flag::Bool)
+    balance.guaranteed_income = flag
+
+    if flag
+        balance.dem_free = sumsy.dem_free
+    else
+        balance.dem_free = 0
+    end
+
+    return balance
+end
+
+"""
+    has_guaranteed_income(balance::Balance)
+
+Returns whether or not the balance is ellegible to receive a guaranteed income.
+"""
+has_guaranteed_income(balance::Balance) = balance.guaranteed_income == nothing ? false : balance.guaranteed_income
+
+"""
+    dem_free(balance::Balance)
+
+Returns the size of the available demurrage free buffer.
+"""
+dem_free(balance::Balance) = balance.dem_free == nothing ? 0 : balance.dem_free
+
+"""
     sumsy_transfer(source::Balance, destination::Balance, amount::BigFloat)
 
 Transfer an amount of SuMSy money from one balance sheet to another. No more than the available amount of money can e transferred.
@@ -134,4 +168,21 @@ Transfer an amount of SuMSy money from one balance sheet to another. No more tha
 function sumsy_transfer!(source::Balance, destination::Balance, amount::Real, timestamp::Int = 0)
     amount = max(0, min(amount, asset_value(source, SUMSY_DEP)))
     transfer_asset!(source, destination, SUMSY_DEP, amount, timestamp)
+end
+
+"""
+    dem_free_transfer(source::Balance, destination::Balance, amount::Real)
+
+Transfer a part or all of the demurrage free buffer from one balance to another. No more than the available demurrage free buffer can be transferred.
+* source::Balance - the balance from which the demurrage free amount is taken.
+* destination::Balance - the balance to which the demurrage free buffer is transferred.
+* amount::Real - the amount to be transferred.
+* return - the actual amount which is transferred. This can be less than the amount passed when the available demurrage free buffer was smaller.
+"""
+function dem_free_transfer(source::Balance, destination::Balance, amount::Real)
+    transferred = BigFloat(min(amount, dem_free(source)))
+    source.dem_free = dem_free(source) - transferred
+    detination.dem_free = dem_free(destination) + transferred
+
+    return transferred
 end
