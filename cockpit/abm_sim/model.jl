@@ -4,12 +4,13 @@ using Main.Finance
 using Main.Production
 
 """
-A Person agent representing an individual.
+    Actor - agent representing an economic actor.
 
 * id::Int - the id of the agent.
+* type::Symbol - the type of actor.
 * balance::Balance - the balance sheet of the agent.
 * posessions::Entities - the entities in posession of the agent.
-* production::Producer - the production facilities of the agent.
+* production::Vector{Producer} - the production facilities of the agent.
 * needs::Dict{Blueprint, Vector{Tuple{Int, Percentage}}}
     Indicates how needs are fulfilled.
     The Blueprints indicate the entities the agent is interested in. The tuples in the vector define thresholds of quantities and probabilities the agent will try to acquire an extra unit of the entity.
@@ -20,54 +21,59 @@ A Person agent representing an individual.
     The the agent has a 100% chance to try to acquire one extra item if the agent posseses 1 or less units, 50% chance of acquiring an extra item when posessing 3 or less units and 0% chance when posessing 5 units. When determining the probability for an acquirement the highest possible probability in accordance with the amount of posessed units is chosen.
     In the give example posession of 4 units would result in a 50% probability to acquire an extra unit.
 """
-mutable struct Person <: AbstractAgent
+mutable struct Actor <: AbstractAgent
     id::Int
+    type::Symbol
     balance::Balance
     posessions::Entities
-    production::Vector{Producer}
-    needs::Dict{Blueprint, Vector{Tuple{Int, Percentage}}}
+    producers::Vector{Producer}
+    needs::Dict{Blueprint, Int}
+    wants::Dict{Blueprint, Vector{Tuple{Int, Percentage}}}
 end
 
-function Person(id::Int,
+function Actor(id::Int,
+            type::Symbol,
             production::Vector{Producer} = Vector{Producer}(),
-            needs::Dict{Blueprint, Vector{Tuple{Int, Percentage}}} = Dict{Blueprint, Vector{Tuple{Int, Percentage}}}())
+            needs::Dict{B, Vector{T}} = Dict{Blueprint, Vector{Tuple{Int, Percentage}}}();
+            posessions = Entities(),
+            balance = Balance()) where {B <: Blueprint, T <: Tuple{Int, Real}}
     for need in keys(needs)
         sort(needs[need])
     end
 
-    return Person(id, Balance(), Entities(), production, needs)
+    return Actor(id, type, balance, posessions, production, needs)
 end
 
-function get_production(person::Person)
+function get_production(actor::Actor)
     production = Set{Blueprint}()
 
-    for producer in person.production
+    for producer in actor.producers
         production = union(Set(keys(get_blueprint(producer).batch)), production)
     end
 
     return production
 end
 
-function get_needs(person::Person)
-    return keys(person.needs)
+function get_needs(actor::Actor)
+    return keys(actor.needs)
 end
 
-function get_posessions(person::Person, bp::Blueprint)
-    if bp in keys(person.posessions)
-        return length(person.posessions[bp])
+function get_posessions(actor::Actor, bp::Blueprint)
+    if bp in keys(actor.posessions)
+        return length(actor.posessions[bp])
     else
         return 0
     end
 end
 
 """
-    determine_desire(person::Person, bp::Blueprint)
+    determine_desire(actor::Actor, bp::Blueprint)
 
-Determines the number of units a Person will try to acquire based on its needs.
+Determines the number of units a Actor will try to acquire based on its needs.
 As long as the check for acquisition results in a desire to acquire an extra unit, another check will be executed to see whether yet another unit would be attempted to be acquired.
 
 # Example:
-Given a Person with the following NeedFulfillment and no posessions:
+Given a Actor with the following NeedFulfillment and no posessions:
 (Blueprint("A") => [(2, 1.0), (5, 0.5)])
 
 Tuples denote a number of units and the probability to desire another one if the person has less than the indicated number.
@@ -76,10 +82,10 @@ A check for acquiring a second unit is executed and since the probability for th
 The probability for a third unit is 50% (the agent now posesses 2 units thus the next tuple is used). If this check results in the attempt to acquire a third unit, a check for acquiring a fourth unit will be made and so on.
 Once 5 units are in posession the check will always be negative in this example and therefor the maximum number of units desired is 5.
 """
-function get_desire(person::Person, bp::Blueprint)
-    cur_posessions = get_posessions(person, bp)
+function get_desire(actor::Actor, bp::Blueprint)
+    cur_posessions = get_posessions(actor, bp)
     acquisitions = 0
-    needs_pattern = person.needs[bp]
+    needs_pattern = actor.needs[bp]
     desire = 0
     acquire = true
 
@@ -100,25 +106,74 @@ function get_desire(person::Person, bp::Blueprint)
     return acquisitions
 end
 
-function get_desires(person::Person)
+function get_desires(actor::Actor)
     desires = Dict{Blueprint, Int}()
 
-    for bp in keys(person.needs)
-        desires[bp] = get_desire(person, bp)
+    for bp in keys(actor.needs)
+        desires[bp] = get_desire(actor, bp)
     end
 
     return desires
 end
 
-function agent_step!(agent, model)
+"""
+    produce!(person::Actor)
+
+Convert as many posessions into new products as possible.
+"""
+function produce!(actor::Actor)
+
+    for producer in actor.production
+    end
+end
+
+"""
+    FUNCTIONS
+
+The property name for actor type specific functions which are called upon agent activation.
+
+# Default actor types.
+
+These pre-defined types have default functions associated with them which are called when the agent is activated. The following list indicates which function is associated with which type. To use these functions upon agent activation, add the dictionary created by the default_functions() function as the value of the FUNCTIONS property.
+
+* PERSON - person_step!
+"""
+FUNCTIONS = :functions
+
+PERSON = :person
+
+# Default properties
+STEP = :step
+
+function default_properties()
+    properties = Dict()
+    properties[FUNCTIONS] = default_functions()
+    properties[STEP] = -1
+end
+
+function default_functions()
+    f_dict = Dict{Symbol, Function}
+
+    f_dict[PERSON] = person_step!
+
+    return f_dict
+end
+
+function person_step!(agent, model)
     target = agent
 
     while target.id == agent.id
         target = random_agent(model)
     end
 
-    amount = round(rand() * sumsy_balance(agent.balance) / 10, digits = 2)
+    amount = rand() * sumsy_balance(agent.balance) / 10
     sumsy_transfer!(agent.balance, target.balance, amount, model.step)
+end
+
+function agent_step!(agent, model)
+    if agent.type in model.functions
+        model.functions[agent.type](agent, model)
+    end
 end
 
 function model_step!(model)
