@@ -27,10 +27,10 @@ A balance sheet, including a history of transactions which led to the current st
 * properties: a dict with user defined properties. If the key of the dict is a Symbol, the value can be retrieved/set by balance.symbol.
 """
 struct Balance
-    balance::Dict{EntryType, Dict{BalanceEntry, BigFloat}}
-    transactions::Vector{Tuple{Int64, EntryType, BalanceEntry, BigFloat, String}}
+    balance::Dict{EntryType, Dict{BalanceEntry, Float64}}
+    transactions::Vector{Tuple{Int64, EntryType, BalanceEntry, Float64, String}}
     properties::Dict
-    Balance(;properties = Dict()) = new(Dict(asset => Dict{BalanceEntry, BigFloat}(), liability => Dict{BalanceEntry, BigFloat}(EQUITY => 0)), Vector{Tuple{Int64, EntryType, BalanceEntry, BigFloat}}(), properties)
+    Balance(;properties = Dict()) = new(Dict(asset => Dict{BalanceEntry, Float64}(), liability => Dict{BalanceEntry, Float64}(EQUITY => 0)), Vector{Tuple{Int64, EntryType, BalanceEntry, Float64}}(), properties)
 end
 
 Base.show(io::IO, b::Balance) = print(io, "Balance(\nAssets:\n$(b.balance[asset]) \nLiabilities:\n$(b.balance[liability]) \nTransactions:\n$(b.transactions))")
@@ -67,32 +67,32 @@ liabilities_value(b::Balance) = sum(values(b.balance[liability]))
 liabilities_net_value(b::Balance) = liabilities_value(b) - equity(b)
 equity(b::Balance) = b.balance[liability][EQUITY]
 
-function entry_value(dict::Dict{BalanceEntry, BigFloat}, entry::BalanceEntry)
+function entry_value(dict::Dict{BalanceEntry, Float64}, entry::BalanceEntry)
     if entry in keys(dict)
         return dict[entry]
     else
-        return BigFloat(0)
+        return Float64(0)
     end
 end
 
-function book_amount!(entry::BalanceEntry, dict::Dict{BalanceEntry, BigFloat}, amount::Real)
+function book_amount!(entry::BalanceEntry, dict::Dict{BalanceEntry, Float64}, amount::Real; digits = 2)
     if entry in keys(dict)
-        dict[entry] += amount
+        dict[entry] += round(amount, digits = digits)
     else
-        dict[entry] = amount
+        dict[entry] = round(amount, digits = digits)
     end
 end
 
-function book_asset!(b::Balance, entry::BalanceEntry, amount::Real, timestamp::Int = 0; comment = "")
-    book_amount!(entry, b.balance[asset], amount)
-    book_amount!(EQUITY, b.balance[liability], amount)
+function book_asset!(b::Balance, entry::BalanceEntry, amount::Real, timestamp::Int = 0; comment = "", digits = 2)
+    book_amount!(entry, b.balance[asset], amount, digits = digits)
+    book_amount!(EQUITY, b.balance[liability], amount, digits = digits)
     push!(b.transactions, (timestamp, asset, entry, amount, comment))
     return asset_value(b, entry)
 end
 
-function book_liability!(b::Balance, entry::BalanceEntry, amount::Real, timestamp::Int = 0; comment = "")
-    book_amount!(entry, b.balance[liability], amount)
-    book_amount!(EQUITY, b.balance[liability], -amount)
+function book_liability!(b::Balance, entry::BalanceEntry, amount::Real, timestamp::Int = 0; comment = "", digits = 2)
+    book_amount!(entry, b.balance[liability], amount, digits = digits)
+    book_amount!(EQUITY, b.balance[liability], -amount, digits = digits)
     push!(b.transactions, (timestamp, liability, entry, amount, comment))
     return liability_value(b, entry)
 end
@@ -100,17 +100,17 @@ end
 transfer_functions = Dict(asset => book_asset!, liability => book_liability!)
 value_functions = Dict(asset => asset_value, liability => liability_value)
 
-function transfer!(b1::Balance, type1::EntryType, b2::Balance, type2::EntryType, entry::BalanceEntry, amount::Real, timestamp::Int = 0; comment = "")
-    transfer_functions[type1](b1, entry, -amount, timestamp, comment = comment)
-    transfer_functions[type2](b2, entry, amount, timestamp, comment = comment)
+function transfer!(b1::Balance, type1::EntryType, b2::Balance, type2::EntryType, entry::BalanceEntry, amount::Real, timestamp::Int = 0; comment = "", digits = 2)
+    transfer_functions[type1](b1, entry, -amount, timestamp, comment = comment, digits = digits)
+    transfer_functions[type2](b2, entry, amount, timestamp, comment = comment, digits = digits)
 
     return value_functions[type1](b1, entry), value_functions[type2](b2, entry)
 end
 
-function transfer_asset!(b1::Balance, b2::Balance, entry::BalanceEntry, amount::Real, timestamp::Int = 0; comment = "")
-    transfer!(b1, asset, b2, asset, entry, amount, timestamp, comment = comment)
+function transfer_asset!(b1::Balance, b2::Balance, entry::BalanceEntry, amount::Real, timestamp::Int = 0; comment = "", digits = 2)
+    transfer!(b1, asset, b2, asset, entry, amount, timestamp, comment = comment, digits = digits)
 end
 
-function transfer_liability!(b1::Balance, b2::Balance, entry::BalanceEntry, amount::Real, timestamp::Int = 0; comment = "")
-    transfer!(b1, liability, b2, liability, entry, amount, timestamp, comment = comment)
+function transfer_liability!(b1::Balance, b2::Balance, entry::BalanceEntry, amount::Real, timestamp::Int = 0; comment = "", digits = 2)
+    transfer!(b1, liability, b2, liability, entry, amount, timestamp, comment = comment, digits = digits)
 end

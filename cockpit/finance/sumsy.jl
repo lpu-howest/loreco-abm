@@ -1,6 +1,7 @@
 using Main.Types
 
 SUMSY_DEP = BalanceEntry("SuMSy deposit")
+SUMSY_DEBT = BalanceEntry("SuMSy debt")
 
 """
     struct SuMSy
@@ -185,4 +186,16 @@ function dem_free_transfer(source::Balance, destination::Balance, amount::Real)
     detination.dem_free = dem_free(destination) + transferred
 
     return transferred
+end
+
+function sumsy_loan(creditor::Balance,
+            debtor::Balance,
+            amount::Real,
+            installments::Integer,
+            interval = 1,
+            timestamp::Int64 = 0;
+            interest_rate::Real = 0,
+            money_entry::BalanceEntry = SUMSY_DEP,
+            debt_entry::BalanceEntry = SUMSY_DEBT)
+    return borrow(creditor, debtor, amount, interest_rate, installments, interval, timestamp, bank_loan = false, negative_allowed = false, money_entry = money_entry, debt_entry = debt_entry)
 end

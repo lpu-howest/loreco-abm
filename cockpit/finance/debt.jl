@@ -23,8 +23,8 @@ mutable struct Debt
     id::UUID
     creditor::Balance
     debtor::Balance
-    installments::Vector{BigFloat}
-    interest_rate::BigFloat
+    installments::Vector{Float64}
+    interest_rate::Float64
     bank_debt::Bool
     money_entry::BalanceEntry
     debt_entry::BalanceEntry
@@ -32,8 +32,8 @@ mutable struct Debt
     interval::Int64
     Debt(creditor::Balance,
         debtor::Balance,
-        installments::Vector{BigFloat},
-        interest_rate::BigFloat = 0;
+        installments::Vector{<:Real},
+        interest_rate::Real = 0;
         bank_debt::Bool = true,
         money_entry::BalanceEntry = DEPOSIT,
         debt_entry::BalanceEntry = DEBT,
@@ -53,8 +53,8 @@ end
 """
     Debt(creditor::Balance,
         debtor::Balance,
-        amount::BigFloat,
-        interest_rate::BigFloat,
+        amount::Real,
+        interest_rate::Real,
         installments::Integer;
         bank_debt::Bool = true,
         money_entry::BalanceEntry = DEPOSIT,
@@ -73,19 +73,26 @@ Create a debt contract between two balances with a number of equal installments.
 * debt_entry: the balance sheet entry to be used to book the debt.
 """
 function Debt(creditor::Balance,
-            debtor::Balance, amount::BigFloat,
-            interest_rate::BigFloat,
+            debtor::Balance,
+            amount::Real,
+            interest_rate::Real,
             installments::Integer;
             bank_debt::Bool = true,
             money_entry::BalanceEntry = DEPOSIT,
             debt_entry::BalanceEntry = DEBT,
             creation::Int64 = 0,
             interval::Int64 = 0)
-    installment = amount / installments
-    installment_vector = Vector{BigFloat}()
+    installment = round(amount / installments, digits = 2)
+    rest = amount - installment * installments
+    installment_vector = Vector{Float64}()
 
-    for i in range(1, length = installments)
-        push!(installment_vector, installment)
+    for i in 1:installments
+        if i == 1
+            # Make sure the entire debt is paid off.
+            push!(installment_vector, installment + rest)
+        else
+            push!(installment_vector, installment)
+        end
     end
 
     return Debt(creditor, debtor, installment_vector, interest_rate; bank_debt = bank_debt, money_entry = money_entry, debt_entry = debt_entry, creation = creation, interval = interval)
@@ -122,7 +129,7 @@ function borrow(creditor::Balance,
             amount::Real,
             interest_rate::Real,
             installments::Integer,
-            interval = 0,
+            interval = 1,
             timestamp::Int64 = 0;
             bank_loan::Bool = true,
             negative_allowed::Bool = true,
@@ -149,6 +156,18 @@ function borrow(creditor::Balance,
     book_liability!(debtor.balance, debt_entry, amount)
 
     return debt
+end
+
+function bank_loan(creditor::Balance,
+            debtor::Balance,
+            amount::Real,
+            interest_rate::Real,
+            installments::Integer,
+            interval = 1,
+            timestamp::Int64 = 0;
+            money_entry::BalanceEntry = DEPOSIT,
+            debt_entry::BalanceEntry = DEBT)
+    return borrow(creditor, debtor, amount, interest_rate, installments, interval, timestamp, bank_loan = true, money_entry = money_entry, debt_entry = debt_entry)
 end
 
 function process_debt!(debt::Debt)
