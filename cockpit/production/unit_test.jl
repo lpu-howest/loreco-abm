@@ -14,8 +14,8 @@ end
 @testset "Restorable" begin
     r = Restorable()
     @test r.health == 1
-    @test r.damage_thresholds == [(1, 1.0)]
-    @test r.restoration_thresholds == [(1, 1.0)]
+    @test r.damage_thresholds == Thresholds([(1, 1.0)])
+    @test r.restoration_thresholds == Thresholds([(1, 1.0)])
 
     r = Restorable(
         0.8,

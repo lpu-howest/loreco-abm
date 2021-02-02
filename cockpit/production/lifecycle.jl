@@ -1,3 +1,4 @@
+using DataStructures
 using Main.Types
 
 @enum Direction up down
@@ -27,6 +28,8 @@ function health(lifecycle::SingleUse)
     return lifecycle.used ? Health(0) : Health(1)
 end
 
+Thresholds = SortedSet{Tuple{Percentage, Float64}}
+
 """
     Restorable
 
@@ -52,31 +55,32 @@ When 1 damage is restored it results in 0.3 damage actually being restored. Shou
 """
 struct Restorable <: Lifecycle
     health::Health
-    damage_thresholds::Vector{Tuple{Percentage, Float64}}
-    restoration_thresholds::Vector{Tuple{Percentage, Float64}}
+    damage_thresholds::Thresholds
+    restoration_thresholds::Thresholds
     wear::Float64
     Restorable(
-        health=1;
-        damage_thresholds=[(1, 1)],
-        restoration_thresholds=[(1, 1)],
+        health::Real=1;
+        damage_thresholds::AbstractVector{<:Tuple{<:Real, <:Real}}=[(1, 1)],
+        restoration_thresholds::AbstractVector{<:Tuple{<:Real, <:Real}}=[(1, 1)],
         wear=0) = new(Health(health),
-                    complete(damage_thresholds, down),
-                    complete(restoration_thresholds, up),
+                    complete(Thresholds(damage_thresholds), down),
+                    complete(Thresholds(restoration_thresholds), up),
                     wear)
 end
+
+
 
 """
     complete
 
-Sort the thresholds and make sure there is a threshold where the percentage == 100%. If the 100% threshold is added, use the same multiplier as the highest threshold. If no threshold is present, add (1, 1).
+Make sure there is a threshold where the percentage == 100%. If the 100% threshold is added, use the same multiplier as the highest threshold. If no threshold is present, add (1, 1).
 """
-function complete(thresholds::Vector, direction::Direction)
-    thresholds = sort(thresholds)
+function complete(thresholds::Thresholds, direction::Direction)
 
     if length(thresholds) == 0
         push!(thresholds, (1, 1))
-    elseif thresholds[end][1] != 1
-        push!(thresholds, (1, thresholds[end][2]))
+    elseif last(thresholds)[1] != 1
+        push!(thresholds, (1, last(thresholds)[2]))
     end
 
     return thresholds
@@ -100,7 +104,7 @@ function change_health(lifecycle::Lifecycle, change::Real, direction::Direction)
 
     # It's easy when there is only the 100% threshold
     if length(thresholds) == 1
-        real_change = thresholds[1][2] * change
+        real_change = first(thresholds)[2] * change
         surplus_change = nothing
     elseif (health(lifecycle) == 1 && direction == up) ||
         (health(lifecycle) == 0 && direction == down)
@@ -108,32 +112,39 @@ function change_health(lifecycle::Lifecycle, change::Real, direction::Direction)
     else
         multiplier = nothing
         max_change = nothing
-        index = 1
+        previous = nothing
+        before_previous = nothing
 
-        while index <= length(thresholds) && multiplier == nothing
-            if health(lifecycle) < thresholds[index][1]
-                multiplier = thresholds[index][2]
+        for threshold in thresholds
+            if health(lifecycle) < threshold[1]
+                multiplier = threshold[2]
 
-                if direction == up && index != length(thresholds)
-                    max_change = thresholds[index][1] - value(health(lifecycle))
-                elseif direction == down && index != 1
-                    if health(lifecycle) != thresholds[index - 1][1]
-                        max_change = value(health(lifecycle)) - thresholds[index - 1][1]
+                if direction == up && threshold != last(thresholds)
+                    max_change = threshold[1] - value(health(lifecycle))
+                elseif direction == down && previous != nothing
+                    if health(lifecycle) != previous[1]
+                        max_change = value(health(lifecycle)) - previous[1]
                     else
-                        multiplier = thresholds[index - 1][2]
-                        if index != 2
-                            max_change = value(health(lifecycle)) - thresholds[index - 2][1]
+                        multiplier = previous[2]
+
+                        if before_previous != nothing
+                            max_change = value(health(lifecycle)) - before_previous[1]
                         end
                     end
                 end
             end
 
-            index += 1
+            if multiplier != nothing
+                break
+            end
+
+            before_previous = previous
+            previous = threshold
         end
 
         if multiplier == nothing
             # Health is below lowest threshold
-            real_change = thresholds[1][2] * change
+            real_change = first(thresholds)[2] * change
         else
             real_change = change * multiplier
         end

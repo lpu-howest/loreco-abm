@@ -2,7 +2,7 @@ module Production
 
 include("entities.jl")
 export Direction, down, up
-export Lifecycle, SingleUse, Restorable
+export Thresholds, Lifecycle, SingleUse, Restorable
 export Identity
 export Entities, Entity, Enhancer, Consumable, Product, Producer
 export push!, pop!
