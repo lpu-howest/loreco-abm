@@ -6,7 +6,7 @@ DEBT = BalanceEntry("Debt")
 """
     mutable struct Debt
 
-A tranferable debt contract between two balance sheets.
+A transferable debt contract between two balance sheets.
 
 * id: The unique id of the contract
 * creditor: the balance sheet which receives debt payments.
