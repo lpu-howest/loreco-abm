@@ -1,5 +1,5 @@
 include("utilities/types.jl")
-using Main.Types
+using .Types
 
 include("production/production.jl")
 using .Production
