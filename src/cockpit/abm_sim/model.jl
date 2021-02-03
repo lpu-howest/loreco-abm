@@ -1,7 +1,63 @@
 using Agents
+using DataStructures
+
 using Main.Types
 using Main.Finance
 using Main.Production
+
+"""
+    Marginality - a progressive marginal use structure.
+
+* marginality::Vector{Tuple{Int64, Percentage}} - a sorted list of tuples consisting of a number of units and a probability resulting in an extra unit if the number of available units is below the indicated number.
+"""
+Marginality = SortedSet{Tuple{Int64, Percentage}}
+
+"""
+    process(marginality::Marginality, units::Int64)
+
+Determines the marginal number of units, given a current number of units.
+As long as the check for a supplementary unit returns true, another check will be executed for yet another unit.
+
+# Example:
+Given a marginality: [(2, 1.0), (5, 0.5)]
+
+Tuples denote a number of units and the probability an extra unit if the available number of units is less than the given number.
+In the example above the probability for the first unit is 100% if no units are available.
+A check for a second unit is executed and since the probability for this is also 100%, a check for a third unit is executed.
+The probability for a third unit is 50% (2 units are available thus the next tuple is used). If this check results in a third unit, a check for a fourth unit will be made and so on.
+Once 5 units are available the check will always return false in this example and therefor the maximum number of units is 5.
+
+# Returns
+The number of marginal units.
+"""
+function process(marginality::Marginality, units::Int64)
+    desire = 0
+
+    for entry in marginality
+        if units >= entry[1]
+            continue
+        end
+
+        if rand() <= entry[2]
+            units += 1
+        else
+            break
+        end
+    end
+
+    return units
+end
+
+"""
+    Needs - indicates the needs of an Actor.
+
+* use::Dict{Blueprint, Marginality} - indicates what the actor will use each cycle.
+* wants::Dict{Blueprint, Marginality} - indicates what the actor will try to purchase each cycle.
+"""
+mutable struct Needs
+    use::Dict{Blueprint, Marginality}
+    wants::Dict{Blueprint, Marginality}
+end
 
 """
     Actor - agent representing an economic actor.
@@ -19,7 +75,7 @@ using Main.Production
     If an agent has a NeedFullfillment consisting of one Blueprint "A" and the following Vector of Tuples associated with this Blueprint:
     [(1, 1.0), (3, 0.5), (5, 0.0)]
     The the agent has a 100% chance to try to acquire one extra item if the agent posseses 1 or less units, 50% chance of acquiring an extra item when posessing 3 or less units and 0% chance when posessing 5 units. When determining the probability for an acquirement the highest possible probability in accordance with the amount of posessed units is chosen.
-    In the give example posession of 4 units would result in a 50% probability to acquire an extra unit.
+    In the given example posession of 4 units would result in a 50% probability to acquire an extra unit.
 """
 mutable struct Actor <: AbstractAgent
     id::Int
@@ -27,8 +83,7 @@ mutable struct Actor <: AbstractAgent
     balance::Balance
     posessions::Entities
     producers::Vector{Producer}
-    needs::Dict{Blueprint, Int}
-    wants::Dict{Blueprint, Vector{Tuple{Int, Percentage}}}
+    needs::Needs
 end
 
 function Actor(id::Int,
@@ -44,7 +99,7 @@ function Actor(id::Int,
     return Actor(id, type, balance, posessions, production, needs)
 end
 
-function get_production(actor::Actor)
+function get_production_output(actor::Actor)
     production = Set{Blueprint}()
 
     for producer in actor.producers
@@ -117,11 +172,11 @@ function get_desires(actor::Actor)
 end
 
 """
-    produce!(person::Actor)
+    produce!(actor::Actor)
 
 Convert as many posessions into new products as possible.
 """
-function produce!(actor::Actor)
+function Production.produce!(actor::Actor)
 
     for producer in actor.production
     end
