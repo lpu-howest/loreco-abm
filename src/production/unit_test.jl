@@ -1,6 +1,6 @@
 using Test
-using Main.Types
-using Main.Production
+using ..Utilities
+using ..Production
 
 @testset "SingleUse" begin
     @test SingleUse().used == false
@@ -68,6 +68,17 @@ end
     @test health(restore!(t1)) == 1
 end
 
+@testset "Resourceless producer" begin
+    cb = ConsumableBlueprint("Consumable")
+    pb = ProducerBlueprint("Producer")
+    pb.batch[cb] = 2
+
+    p = Producer(pb)
+
+    products = produce!(p, Entities())
+    @test length(products.products[cb]) == 2
+    @test products.batches == 1
+end
 
 @testset "Producer" begin
     labour_bp = ConsumableBlueprint("Labour")
@@ -86,10 +97,17 @@ end
 
     @test !(labour_bp in keys(resources))
     @test machine_bp in keys(resources)
-    @test health(resources[machine_bp][1]) == 0.9
-    @test length(products[food_bp]) == 1
-    @test get_name(products[food_bp][1]) == "Food"
-    @test typeof(products[food_bp][1]) == Consumable
+
+    for machine in resources[machine_bp]
+        @test health(machine) == 0.9
+    end
+
+    @test length(products.products[food_bp]) == 1
+
+    for food in products.products[food_bp]
+        @test get_name(food) == "Food"
+        @test typeof(food) == Consumable
+    end
 end
 
 @testset "Entities" begin
@@ -99,13 +117,24 @@ end
     c = Consumable(cb)
     p1 = Product(pb)
     p2 = Product(pb)
+
+    @test num_entities(e, cb) == 0
+
     push!(e, c)
     push!(e, p1)
     push!(e, p2)
     @test length(e[cb]) == 1
     @test length(e[pb]) == 2
-    use!(e[pb][1])
-    @test health(e[pb][1]) == 0.9
+    use!(p1)
+
+    h1_0 = false
+    h0_9 = false
+    for p in e[pb]
+        h1_0 |= health(p) == 1
+        h0_9 |= health(p) == 0.9
+    end
+
+    @test h1_0 && h0_9
 end
 
 @testset "extract!" begin
@@ -124,5 +153,8 @@ end
     @test Production.extract!(req, e) == 1
     @test length(keys(e)) == 1
     @test !(cb in keys(e))
-    @test health(e[pb][end]) == 0.9
+
+    for product in e[pb]
+        @test health(product) == 0.9
+    end
 end

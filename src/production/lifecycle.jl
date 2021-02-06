@@ -1,5 +1,5 @@
 using DataStructures
-using Main.Types
+using ..Utilities
 
 @enum Direction up down
 
@@ -77,7 +77,7 @@ Make sure there is a threshold where the percentage == 100%. If the 100% thresho
 """
 function complete(thresholds::Thresholds, direction::Direction)
 
-    if length(thresholds) == 0
+    if isempty(thresholds)
         push!(thresholds, (1, 1))
     elseif last(thresholds)[1] != 1
         push!(thresholds, (1, last(thresholds)[2]))

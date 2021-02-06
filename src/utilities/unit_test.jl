@@ -1,5 +1,5 @@
 using Test
-using Main.Types
+using .Utilities
 
 @testset "Percentage" begin
     @test_throws MethodError Percentage()

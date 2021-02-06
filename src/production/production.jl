@@ -1,13 +1,21 @@
 module Production
 
-include("entities.jl")
+include("lifecycle.jl")
 export Direction, down, up
 export Thresholds, Lifecycle, SingleUse, Restorable
-export Identity
-export Entities, Entity, Enhancer, Consumable, Product, Producer
-export push!, pop!
+export health, use!, damage!, restore!
+
+include("blueprint.jl")
 export Blueprint, ConsumableBlueprint, ProductBlueprint, ProducerBlueprint
-export health, id, get_blueprint, type_id, get_name, is_type
-export use!, produce!, damage!, restore!
+export type_id, get_name
+
+include("entities.jl")
+export Entities, Entity
+export num_entities
+
+include("products.jl")
+export Enhancer, Consumable, Product, Producer
+export id, get_blueprint, is_type, produce!
+export push!, pop!
 
 end

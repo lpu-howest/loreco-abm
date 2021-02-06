@@ -1,7 +1,3 @@
-module Types
-
-export Percentage, Health, value
-
 struct Percentage <: Real
     value::Float64
     Percentage(x, precision::Integer=6) = x < 0 ? new(0) : x > 1 ? new(1) : new(round(x, digits=precision))
@@ -64,5 +60,3 @@ end
 
 /(x::Health, y::Percentage) = Health(round(value(x) / value(y), digits = 6))
 /(x::Percentage, y::Health) = Health(round(value(x) / value(y), digits = 6))
-
-end

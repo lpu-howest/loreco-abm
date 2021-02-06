@@ -1,5 +1,5 @@
 using Test
-using Main.Finance
+using ..Finance
 
 @testset "Balance" begin
     b = Balance()
@@ -44,6 +44,30 @@ using Main.Finance
     @test liabilities_net_value(b) == 11
     @test equity(b) == 4
     @test validate(b)
+end
+
+@testset "Min balances" begin
+    e1 = BalanceEntry("E1")
+    e2 = BalanceEntry("E2")
+    b = Balance()
+
+    min_asset!(b, e1, -Inf)
+    min_liability!(b, e2, -Inf)
+
+    @test min_asset(b, e1) < 0
+    @test min_asset(b, e2) == 0
+
+    @test min_liability(b, e1) == 0
+    @test min_liability(b, e2) < 0
+
+    @test book_asset!(b, e1, -50)
+    @test !book_asset!(b, e2, -50)
+
+    @test !book_liability!(b, e1, -50)
+    @test book_liability!(b, e2, -50)
+
+    min_liability!(b, EQUITY, 0)
+    @test min_liability(b, EQUITY) < 0
 end
 
 @testset "Transfers" begin
@@ -116,4 +140,88 @@ end
     @test has_guaranteed_income(balance)
     @test dem_free(balance) == 50000
     @test calculate_demurrage(sumsy, balance, 10) == 20000
+end
+
+@testset "Transfer queues" begin
+    e1 = BalanceEntry("E1")
+    e2 = BalanceEntry("E2")
+
+    b1 = Balance()
+    min_asset!(b1, e1, -Inf)
+    min_liability!(b1, e2, -Inf)
+
+    b2 = Balance()
+    min_asset!(b2, e1, -Inf)
+    min_liability!(b2, e2, -Inf)
+
+    # 1 valid transfer
+    queue_asset_transfer!(b1, b2, e1, 100)
+    @test execute_transfers!(b1)
+    @test length(b1.transfer_queue) == 0
+    @test asset_value(b1, e1) == -100
+    @test asset_value(b2, e1) == 100
+
+    # 1 valid, 1 invalid transfer
+    queue_asset_transfer!(b1, b2, e1, 100)
+    queue_liability_transfer!(b1, b2, e1, 100)
+    @test !execute_transfers!(b1)
+    @test length(b1.transfer_queue) == 0
+    @test asset_value(b1, e1) == -100 # value unchanged
+    @test asset_value(b2, e1) == 100 # value unchanged
+    @test liability_value(b1, e1) == 0
+    @test liability_value(b2, e1) == 0
+
+    # Multiple valid transfers
+    @test book_asset!(b1, e2, 100)
+    @test book_liability!(b2, e1, 100)
+
+    queue_asset_transfer!(b1, b2, e1, 100)
+    queue_asset_transfer!(b1, b2, e2, 50)
+    queue_asset_transfer!(b1, b2, e2, 25)
+
+    queue_liability_transfer!(b2, b1, e1, 50)
+    queue_liability_transfer!(b2, b1, e2, 100)
+    queue_liability_transfer!(b2, b1, e2, 25)
+
+    @test execute_transfers!(b1)
+    @test length(b1.transfer_queue) == 0
+    @test length(b2.transfer_queue) > 0 # Only be transfer queue is processed
+    @test asset_value(b1, e1) == -200
+    @test asset_value(b2, e1) == 200
+    @test asset_value(b1, e2) == 25
+    @test asset_value(b2, e2) == 75
+
+    @test execute_transfers!(b2)
+    @test length(b2.transfer_queue) == 0
+    @test liability_value(b1, e1) == 50
+    @test liability_value(b2, e1) == 50
+    @test liability_value(b1, e2) == 125
+    @test liability_value(b2, e2) == -125
+end
+
+@testset "Price" begin
+    c1 = BalanceEntry("C1")
+    c2 = BalanceEntry("C2")
+
+    b1 = Balance()
+    min_asset!(b1, c1, -Inf)
+    book_asset!(b1, c1, 100)
+    book_asset!(b1, c2, 100)
+
+    b2 = Balance()
+
+    p1 = Price([c1 => 50, c2 => 150])
+    @test p1[c1] == 50
+    @test p1[c2] == 150
+
+    p2 = Price([c1 => 150, c2 => 50])
+
+    @test !pay!(b1, b2, p1)
+    @test pay!(b1, b2, p2)
+
+    @test asset_value(b1, c1) == -50
+    @test asset_value(b1, c2) == 50
+
+    @test asset_value(b2, c1) == 150
+    @test asset_value(b2, c2) == 50
 end
