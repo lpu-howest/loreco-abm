@@ -1,6 +1,6 @@
 module ABM_Sim
     include("marginality.jl")
-    export Marginality
+    export Marginality, process
 
     include("needs.jl")
     export Needs

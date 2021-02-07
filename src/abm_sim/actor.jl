@@ -54,34 +54,34 @@ end
 
 function push_usage!(actor::Actor,
                     bp::Blueprint,
-                    marginality::Marginality,
-                    priority::Int64 = 0)
-    push_usage!(actor.needs, bp, marginality, priority)
+                    marginality::Marginality;
+                    priority::Integer = 0)
+    push_usage!(actor.needs, bp, marginality, priority = priority)
 
     return actor
 end
 
 function push_want!(actor::Actor,
                     bp::Blueprint,
-                    marginality::Marginality,
-                    priority::Int64 = 0)
-    push_want!(actor.needs, bp, marginality, priority)
+                    marginality::Marginality;
+                    priority::Integer = 0)
+    push_want!(actor.needs, bp, marginality, priority = priority)
 
     return actor
 end
 
 function delete_usage!(actor::Actor,
-                    bp::Blueprint,
-                    priority::Int64 = nothing)
-    delete_usage!(actor.needs, bp, priority)
+                    bp::Blueprint;
+                    priority::Integer = nothing)
+    delete_usage!(actor.needs, bp, priority = priority)
 
     return actor
 end
 
 function delete_want!(actor::Actor,
-                    bp::Blueprint,
-                    priority::Int64 = nothing)
-    delete_want!(actor.needs, bp, priority)
+                    bp::Blueprint;
+                    priority::Integer = nothing)
+    delete_want!(actor.needs, bp, priority = priority)
 
     return actor
 end

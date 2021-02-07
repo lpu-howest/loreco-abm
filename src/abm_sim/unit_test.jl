@@ -13,6 +13,7 @@ using ..ABM_Sim
     @test length(m) == 2
     @test first(m) == (1, 1)
     @test last(m) == (5, 0.1)
+    @test 1 <= process(m) <= 5
 end
 
 @testset "Needs" begin
@@ -23,19 +24,19 @@ end
     needs = Needs()
 
     # usage
-    push_usage!(needs, cb, Marginality([(2, 1), (5, 0.5)]), 1)
-    push_usage!(needs, pb, Marginality([(1, 1), (2, 0.1)]), 2)
+    push_usage!(needs, cb, Marginality([(2, 1), (5, 0.5)]), priority = 1)
+    push_usage!(needs, pb, Marginality([(1, 1), (2, 0.1)]), priority = 2)
 
     # wants
-    push_want!(needs, cb, Marginality([(1, 1), (2, 0.5)]), 2)
-    push_want!(needs, pb, Marginality([(1, 1)]), 1)
+    push_want!(needs, cb, Marginality([(1, 1), (2, 0.5)]), priority = 2)
+    push_want!(needs, pb, Marginality([(1, 1)]), priority = 1)
 
     usages = process_usage(needs)
     @test length(usages) == 2
     @test usages[1].blueprint == cb
     @test 2 <= usages[1].units <= 5
     @test usages[2].blueprint == pb
-    @test usages[2].units == 1
+    @test 1 <= usages[2].units <= 2
 
     wants = process_wants(needs, Entities())
     @test length(wants) == 2

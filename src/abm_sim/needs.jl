@@ -14,9 +14,9 @@ using ..Production
 struct Needs
     usage_priorities::Set{Int64}
     wants_priorities::Set{Int64}
-    usage::OrderedDict{Tuple{Int64, Blueprint}, Marginality}
-    wants::OrderedDict{Tuple{Int64, Blueprint}, Marginality}
-    Needs() = new(Set{Int64}(), Set{Int64}(), OrderedDict{Tuple{Int64, Blueprint}, Marginality}(), OrderedDict{Tuple{Int64, Blueprint}, Marginality}())
+    usage::SortedDict{Tuple{Int64, Blueprint}, Marginality}
+    wants::SortedDict{Tuple{Int64, Blueprint}, Marginality}
+    Needs() = new(Set{Int64}(), Set{Int64}(), SortedDict{Tuple{Int64, Blueprint}, Marginality}(), SortedDict{Tuple{Int64, Blueprint}, Marginality}())
 end
 
 @enum NeedType usage want
@@ -51,7 +51,7 @@ Adds a usage or want to the needs.
 function Base.push!(needs::Needs,
                 type::NeedType,
                 bp::Blueprint,
-                marginality::Marginality,
+                marginality::Marginality;
                 priority::Integer = 0)
     data = needs_data(needs, type)
 
@@ -63,21 +63,21 @@ end
 
 function push_usage!(needs::Needs,
                     bp::Blueprint,
-                    marginality::Marginality,
+                    marginality::Marginality;
                     priority::Integer = 0)
-    return push!(needs, usage, bp, marginality, priority)
+    return push!(needs, usage, bp, marginality, priority = priority)
 end
 
 function push_want!(needs::Needs,
                     bp::Blueprint,
-                    marginality::Marginality,
+                    marginality::Marginality;
                     priority::Integer = 0)
-    return push!(needs, want, bp, marginality, priority)
+    return push!(needs, want, bp, marginality, priority = priority)
 end
 
 function Base.delete!(needs::Needs,
                     type::NeedType,
-                    bp::Blueprint,
+                    bp::Blueprint;
                     priority::Integer = nothing)
     data = needs_data(needs, type)
 
@@ -103,15 +103,15 @@ function Base.delete!(needs::Needs,
 end
 
 function delete_usage!(needs::Needs,
-                    bp::Blueprint,
+                    bp::Blueprint;
                     priority::Integer = nothing)
-    return delete!(needs, usage, bp, priority)
+    return delete!(needs, usage, bp, priority = priority)
 end
 
 function delete_want!(needs::Needs,
-                    bp::Blueprint,
+                    bp::Blueprint;
                     priority::Integer = nothing)
-    return delete!(needs, want, bp, priority)
+    return delete!(needs, want, bp, priority = priority)
 end
 
 is_prioritised(needs::Needs, type::NeedType) = length(needs_data(needs, type).priorities) > 1

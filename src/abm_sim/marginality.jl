@@ -26,17 +26,20 @@ Once 5 units are available the check will always return false in this example an
 # Returns
 The number of marginal units.
 """
-function process(marginality::Marginality, units::Int64)
-    desire = 0
-
+function process(marginality::Marginality, units::Int64 = 0)
     for entry in marginality
-        if units >= entry[1]
-            continue
+        done = false
+
+        while units < entry[1]
+            if rand() <= entry[2]
+                units += 1
+            else
+                done = true
+                break
+            end
         end
 
-        if rand() <= entry[2]
-            units += 1
-        else
+        if done
             break
         end
     end
