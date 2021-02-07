@@ -58,3 +58,4 @@ get_name(blueprint::Blueprint) = blueprint.name
 copy_lifecycle(blueprint::Blueprint) = deepcopy(blueprint.lifecycle)
 
 ==(x::Blueprint, y::Blueprint) = type_id(x) == type_id(y)
+Base.isless(x::Blueprint, y::Blueprint) = isless(type_id(x), type_id(y))
