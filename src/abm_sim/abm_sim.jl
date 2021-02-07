@@ -15,6 +15,6 @@ module ABM_Sim
 
     include("model.jl")
     export FUNCTIONS, PERSON
-    export get_production_output, get_needs, get_desire, get_desires
-    export agent_step!, model_step!
+    export default_properties
+    export agent_step!, person_step!, model_step!
 end
