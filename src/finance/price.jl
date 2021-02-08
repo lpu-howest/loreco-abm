@@ -3,7 +3,7 @@
 
 Price is a type alias for Dict{BalanceEntry, Real}
 """
-Price = Dict{BalanceEntry, Real}
+Price = Dict{BalanceEntry, Real} # TODO convert into struct with precision without breaking existing code
 
 """
     pay!(buyer::Balance,
