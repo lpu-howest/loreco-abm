@@ -1,11 +1,14 @@
 include("utilities/Utilities.jl")
 using .Utilities
 
-include("production/production.jl")
+include("production/Production.jl")
 using .Production
 
-include("finance/finance.jl")
+include("finance/Finance.jl")
 using .Finance
 
-include("abm_sim/abm_sim.jl")
+include("abm_sim/ABM_Sim.jl")
 using .ABM_Sim
+
+include("Loreco/")
+using .Loreco
