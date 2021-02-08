@@ -75,17 +75,3 @@ end
     @test p1 in person.producers
     @test p2 in person.producers
 end
-
-@testset "Model" begin
-    # prices = Dict{Blueprint, Price}()
-    # properties = default_properties()
-    # properties[:SuMSy] = SuMSy(2000, 25000, 0.1, 30, seed = 5000)
-    # properties[:prices] = prices
-    # model = ABM(Person, properties = properties)
-    #
-    # for n in 1:20
-    #     add_agent!(model)
-    # end
-
-    # step!(model, agent_step!, model_step!, 100000, false)
-end
