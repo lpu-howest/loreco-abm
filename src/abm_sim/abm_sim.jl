@@ -12,9 +12,4 @@ module ABM_Sim
     export Actor
     export push_producer!, delete_producer!, produce!, purchase!
     export get_posessions, get_production_output, process_needs, process_usage, process_wants
-
-    include("model.jl")
-    export FUNCTIONS, PERSON
-    export default_properties
-    export agent_step!, person_step!, model_step!
 end
