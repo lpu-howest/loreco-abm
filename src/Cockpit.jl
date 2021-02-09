@@ -10,5 +10,5 @@ using .Finance
 include("abm_sim/ABM_Sim.jl")
 using .ABM_Sim
 
-include("Loreco/")
+include("loreco/Loreco.jl")
 using .Loreco
