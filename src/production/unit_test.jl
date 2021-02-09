@@ -75,9 +75,12 @@ end
 
     p = Producer(pb)
 
-    products = produce!(p, Entities())
-    @test length(products.products[cb]) == 2
-    @test products.batches == 1
+    production = produce!(p, Entities())
+    for product in production.products
+        @test get_blueprint(product) == cb
+    end
+    @test length(production.products) == 2
+    @test production.batches == 1
 end
 
 @testset "Producer" begin
@@ -90,7 +93,8 @@ end
         batch = Dict(food_bp => 1)
     )
 
-    resources = Entities(Dict{Blueprint,Vector{Entity}}(labour_bp => [Consumable(labour_bp), Consumable(labour_bp)], machine_bp => [Product(machine_bp)]))
+    resources = Entities()
+    push!(resources, [Consumable(labour_bp), Consumable(labour_bp), Product(machine_bp)])
     factory = Producer(factory_bp)
 
     products = produce!(factory, resources)
@@ -102,9 +106,9 @@ end
         @test health(machine) == 0.9
     end
 
-    @test length(products.products[food_bp]) == 1
+    @test length(products.products) == 1
 
-    for food in products.products[food_bp]
+    for food in products.products
         @test get_name(food) == "Food"
         @test typeof(food) == Consumable
     end

@@ -1,7 +1,6 @@
 
 using UUIDs
-
-INF = 2^63 - 1 # Indicates infinity for Int64
+using ..Utilities
 
 abstract type Enhancer <: Entity end
 
@@ -117,7 +116,7 @@ A named tuple {products::Entities, resources::Entities, batches::Int64} where
 function produce!(producer::Producer,
                 resources::Entities = Entities();
                 max_production = INF)
-    products = Entities()
+    products = Set{Entity}()
 
     if health(producer) > 0
         bp = get_blueprint(producer)
@@ -132,7 +131,6 @@ function produce!(producer::Producer,
             for i in 1:production
                 for prod_bp in keys(bp.batch)
                     for j in 1:bp.batch[prod_bp]
-                        product = ENTITY_CONSTRUCTORS[typeof(prod_bp)](prod_bp)
                         push!(products, ENTITY_CONSTRUCTORS[typeof(prod_bp)](prod_bp))
                     end
                 end

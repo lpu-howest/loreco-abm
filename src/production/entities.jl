@@ -9,18 +9,9 @@ struct Entities
     Entities() = new(Dict{Blueprint,Set{Entity}}())
 end
 
-function Entities(resources::Dict{B,Vector{E}}) where {B <: Blueprint, E <: Entity}
-    entities = Entities()
-
-    for blueprint in keys(resources)
-        for entity in resources[blueprint]
-            push!(entities, entity)
-        end
-    end
-
-    return entities
-end
-
+Base.isempty(entities::Entities) = isempty(entities.entities)
+Base.empty(entities::Entities) = empty(entities.entities)
+Base.empty!(entities::Entities) = empty!(entities.entities)
 Base.keys(entities::Entities) = keys(entities.entities)
 Base.values(entities::Entities) = values(entities.entities)
 Base.getindex(entities::Entities, index::Blueprint) = entities.entities[index]
@@ -31,6 +22,14 @@ function Base.push!(entities::Entities, entity::Entity)
         push!(entities[entity.blueprint], entity)
     else
         entities[entity.blueprint] = Set{Entity}([entity])
+    end
+
+    return entities
+end
+
+function Base.push!(entities::Entities, units::Union{Vector{E}, Set{E}}) where {E <: Entity}
+    for entity in units
+        push!(entities, entity)
     end
 
     return entities
