@@ -15,11 +15,11 @@ Representation of the parameters of a SuMSy implementation.
 * seed: the amount whith which new accounts start.
 """
 mutable struct SuMSy
-    guaranteed_income::BigFloat
-    dem_free::BigFloat
-    dem_tiers::Vector{Tuple{BigFloat, Percentage}}
+    guaranteed_income::Float64
+    dem_free::Float64
+    dem_tiers::Vector{Tuple{Float64, Percentage}}
     interval::Int64
-    seed::BigFloat
+    seed::Float64
     SuMSy(guaranteed_income::Real,
         dem_free::Real,
         dem_tiers::Vector{T},
@@ -32,7 +32,7 @@ mutable struct SuMSy
 end
 
 """
-    SuMSy(guaranteed_income::BigFloat, dem_free_buffer::BigFloat, dem::Percentage)
+    SuMSy(guaranteed_income::Real, dem_free_buffer::Real, dem::Percentage)
 
 Create a SuMSy struct with 1 demurrage tier.
 """
@@ -162,7 +162,7 @@ Returns the size of the available demurrage free buffer.
 dem_free(balance::Balance) = balance.dem_free == nothing ? 0 : balance.dem_free
 
 """
-    sumsy_transfer(source::Balance, destination::Balance, amount::BigFloat)
+    sumsy_transfer(source::Balance, destination::Balance, amount::Float64)
 
 Transfer an amount of SuMSy money from one balance sheet to another. No more than the available amount of money can e transferred.
 """
@@ -181,7 +181,7 @@ Transfer a part or all of the demurrage free buffer from one balance to another.
 * return - the actual amount which is transferred. This can be less than the amount passed when the available demurrage free buffer was smaller.
 """
 function dem_free_transfer(source::Balance, destination::Balance, amount::Real)
-    transferred = BigFloat(min(amount, dem_free(source)))
+    transferred = Float64(min(amount, dem_free(source)))
     source.dem_free = dem_free(source) - transferred
     detination.dem_free = dem_free(destination) + transferred
 
