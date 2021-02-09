@@ -1,9 +1,32 @@
 """
     Price - a composite price consisting of one or more price components, each associated with a specific balance entry.
-
-Price is a type alias for Dict{BalanceEntry, Real}
 """
-Price = Dict{BalanceEntry, Real} # TODO convert into struct with precision without breaking existing code
+struct Price
+    components::Dict{BalanceEntry, Float64}
+    precision::Int64
+    Price(;precision::Integer) = new(Dict{BalanceEntry, Float64}(), precision)
+end
+
+function Price(components::Dict{BalanceEntry, <:Real}; precision::Integer = 2)
+    price = Price(precision = precision)
+
+    for entry in keys(components)
+        price.components[entry] = round(components[entry], digits = precision)
+    end
+
+    return price
+end
+
+Price(components::AbstractVector{<:Pair{BalanceEntry, <:Real}}; precision::Integer = 2) = Price(Dict{BalanceEntry, Float64}(components), precision = precision)
+
+
+Base.isempty(price::Price) = isempty(price.components)
+Base.empty(price::Price) = empty(price.components)
+Base.empty!(price::Price) = empty!(price.components)
+Base.keys(price::Price) = keys(price.components)
+Base.values(price::Price) = values(price.components)
+Base.getindex(price::Price, index::BalanceEntry) = price.components[index]
+Base.setindex!(price::Price, amount::Real, index::BalanceEntry) = (price.components[index] = round(amount, digits = price.precision))
 
 """
     pay!(buyer::Balance,
