@@ -14,7 +14,7 @@ Base.empty(entities::Entities) = empty(entities.entities)
 Base.empty!(entities::Entities) = empty!(entities.entities)
 Base.keys(entities::Entities) = keys(entities.entities)
 Base.values(entities::Entities) = values(entities.entities)
-Base.getindex(entities::Entities, index::Blueprint) = entities.entities[index]
+Base.getindex(entities::Entities, index::Blueprint) = index in keys(entities.entities) ? entities.entities[index] : Set{Entity}()
 Base.setindex!(entities::Entities, e::Set{Entity}, index::Blueprint) = (entities.entities[index] = e)
 
 function Base.push!(entities::Entities, entity::Entity)
