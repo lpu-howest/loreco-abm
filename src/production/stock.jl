@@ -26,11 +26,11 @@ min_stock!(stock::Stock, bp::Blueprint, units::Integer) = stock_limits!(stock, b
 max_stock(stock::Stock, bp::Blueprint) = stock_limits(stock, bp)[2]
 max_stock!(stock::Stock, bp::Blueprint, units::Integer) = stock_limits!(stock, bp, min_stock(stock, bp), units)
 
-function add_stock!(stock::Stock, products::Set{E}) where E <: Entity
+function add_stock!(stock::Stock, products::Union{AbstractSet{E}, AbstractVector{E}}; force::Bool = false) where E <: Entity
     for product in collect(products)
         bp = get_blueprint(product)
 
-        if current_stock(stock, bp) < max_stock(stock, bp)
+        if force || current_stock(stock, bp) < max_stock(stock, bp)
             pop!(products, product)
             push!(stock.stock, product)
         end
@@ -39,16 +39,7 @@ function add_stock!(stock::Stock, products::Set{E}) where E <: Entity
     return stock
 end
 
-function add_stock!(stock::Stock, products::Union{Set{E}, AbstractVector{E}}) where {E <: Entity}
-    product_set = Set(products)
-    add_stock!(stock, product_set)
-    empty!(products)
-    union!(products, product_set)
-
-    return stock
-end
-
-add_stock!(stock::Stock, product::Entity) = add_stock!(stock, [product])
+add_stock!(stock::Stock, product::Entity; force::Bool = false) = add_stock!(stock, [product], force = force)
 
 function retrieve_stock!(stock::Stock, bp::Blueprint, units::Integer)
     products = Set{Entity}()
@@ -77,9 +68,12 @@ Base.isempty(stock::Stock) = isempty(stock.stock)
 Base.empty(stock::Stock) = empty(stock.stock)
 Base.empty!(stock::Stock) = empty!(stock.stock)
 
-function reset(stock::Stock)
+function purge!(stock::Stock, clear_limits::Bool = false)
     empty!(stock)
-    empty!(stock.stock_limits)
+
+    if clear_limits
+        empty!(stock.stock_limits)
+    end
 
     return stock
 end
