@@ -69,7 +69,7 @@ end
     push!(posessions, Consumable(cb))
     balance = Balance()
     book_asset!(balance, BalanceEntry("C"), 100)
-    person = Actor(1, PERSON, [p1, p2], needs, posessions = posessions, balance = balance)
+    person = Actor(1, :person, needs, producers = [p1, p2], posessions = posessions, balance = balance)
 
     @test length(person.producers) == 2
     @test p1 in person.producers
