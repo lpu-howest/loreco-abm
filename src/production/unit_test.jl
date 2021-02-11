@@ -162,3 +162,63 @@ end
         @test health(product) == 0.9
     end
 end
+
+@testset "Stock" begin
+    bp = ConsumableBlueprint("C")
+    stock = Stock()
+
+    @test isempty(stock)
+    @test min_stock(stock, bp) == 0
+    @test max_stock(stock, bp) == INF
+
+    min_stock!(stock, bp, 5)
+    max_stock!(stock, bp, 10)
+
+    @test isempty(stock)
+    @test min_stock(stock, bp) == 5
+    @test max_stock(stock, bp) == 10
+    @test !stocked(stock, bp)
+    @test !overstocked(stock, bp)
+
+    add_stock!(stock, Consumable(bp))
+    @test !isempty(stock)
+    @test !stocked(stock, bp)
+    @test !overstocked(stock, bp)
+    @test current_stock(stock, bp) == 1
+
+    products = retrieve_stock!(stock, bp, 2)
+
+    @test length(products) == 1
+    @test isempty(stock)
+    @test !stocked(stock, bp)
+    @test !overstocked(stock, bp)
+
+    for i in 1:3
+        products = [Consumable(bp), Consumable(bp)]
+        add_stock!(stock, products)
+    end
+
+    @test isempty(products)
+
+    @test !isempty(stock)
+    @test stocked(stock, bp)
+    @test !overstocked(stock, bp)
+    @test current_stock(stock, bp) == 6
+
+    stock_limits!(stock, bp, 1, 5)
+    @test stocked(stock, bp)
+    @test overstocked(stock, bp)
+    @test current_stock(stock, bp) == 6
+
+    products = retrieve_stock!(stock, bp, 3)
+    @test length(products) == 3
+    @test stocked(stock, bp)
+    @test !overstocked(stock, bp)
+    @test current_stock(stock, bp) == 3
+
+    add_stock!(stock, products)
+    @test length(products) == 1
+    @test stocked(stock, bp)
+    @test !overstocked(stock, bp)
+    @test current_stock(stock, bp) == 5
+end
