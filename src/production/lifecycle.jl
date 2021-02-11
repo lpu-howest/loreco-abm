@@ -76,7 +76,6 @@ end
 Make sure there is a threshold where the percentage == 100%. If the 100% threshold is added, use the same multiplier as the highest threshold. If no threshold is present, add (1, 1).
 """
 function complete(thresholds::Thresholds, direction::Direction)
-
     if isempty(thresholds)
         push!(thresholds, (1, 1))
     elseif last(thresholds)[1] != 1
