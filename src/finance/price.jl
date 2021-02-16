@@ -1,3 +1,5 @@
+using ..Utilities
+
 import Base: +, -, *, /, <, >, <=, >=, ==, max, min
 
 """
@@ -65,6 +67,16 @@ end
 
 Base.:/(price::Price, x::Real) = apply_op(price, x, :/)
 
+function purchases_available(balance::Balance, price::Price, units::Integer)
+    max_available = INF
+
+    for entry in keys(price)
+        max_available = min(max_available, round(asset_value(balance, entry) / price[entry], RoundDown))
+    end
+
+    return min(units, Integer(max_available))
+end
+
 """
     pay!(buyer::Balance,
         seller::Balance,
@@ -81,8 +93,8 @@ function pay!(buyer::Balance,
             timestamp::Integer = 0;
             comment::String = "")
     for entry in keys(price)
-        queue_asset_transfer!(buyer, seller, entry, price[entry])
+        queue_asset_transfer!(buyer, seller, entry, price[entry], comment = comment)
     end
 
-    return execute_transfers!(buyer)
+    return execute_transfers!(buyer, timestamp)
 end

@@ -1,4 +1,5 @@
 using DataStructures
+using Random
 
 using ..Utilities
 using ..Production
@@ -16,6 +17,7 @@ struct Needs
     wants_priorities::Set{Int64}
     usage::SortedDict{Tuple{Int64, Blueprint}, Marginality}
     wants::SortedDict{Tuple{Int64, Blueprint}, Marginality}
+
     Needs() = new(Set{Int64}(), Set{Int64}(), SortedDict{Tuple{Int64, Blueprint}, Marginality}(), SortedDict{Tuple{Int64, Blueprint}, Marginality}())
 end
 
@@ -33,6 +35,7 @@ function needs_data(needs::Needs, type::NeedType)
     return (target = target, priorities = priorities)
 end
 
+Need = @NamedTuple{blueprint::B, units::Integer} where {B <: Blueprint}
 
 """
     push!(needs::Needs,
@@ -68,12 +71,16 @@ function push_usage!(needs::Needs,
     return push!(needs, usage, bp, marginality, priority = priority)
 end
 
+push_usage!(needs::Needs, bp::Blueprint, marginality::Vector{<:Tuple{Integer, Real}}; priority::Integer = 0) = push_usage!(needs, bp, Marginality(marginality), priority = priority)
+
 function push_want!(needs::Needs,
                     bp::Blueprint,
                     marginality::Marginality;
                     priority::Integer = 0)
     return push!(needs, want, bp, marginality, priority = priority)
 end
+
+push_want!(needs::Needs, bp::Blueprint, marginality::Vector{<:Tuple{Integer, Real}}; priority::Integer = 0) = push_want!(needs, bp, Marginality(marginality), priority = priority)
 
 function Base.delete!(needs::Needs,
                     type::NeedType,
@@ -129,7 +136,7 @@ Get a vector of all the needs of the actor of the specified need type. The vecto
 function process_needs(needs::Needs,
                     type::NeedType,
                     posessions::Entities = Entities())
-    result = Vector{@NamedTuple{blueprint::Blueprint, units::Int}}()
+    result = Vector{@NamedTuple{blueprint::Blueprint, units::Int64}}()
     data = needs_data(needs, type)
 
     for key in keys(data.target)
@@ -150,5 +157,16 @@ function process_needs(needs::Needs,
     return result
 end
 
+"""
+    process_usage(needs::Needs)
+
+Determine the items the actor wants to use. This in independant on the actual items in posession of the actor.
+"""
 process_usage(needs::Needs) = process_needs(needs, usage)
+
+"""
+    process_wants(needs::Needs, posessions = Entities())
+
+Determine the items the actor wants, base on the items in posession of the actor.
+"""
 process_wants(needs::Needs, posessions = Entities()) = process_needs(needs, want, posessions)

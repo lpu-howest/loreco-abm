@@ -21,6 +21,6 @@ export Debt, borrow, process_debt!
 
 include("price.jl")
 export Price
-export pay!
+export purchases_available, pay!
 
 end

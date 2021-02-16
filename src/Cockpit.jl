@@ -7,8 +7,8 @@ using .Production
 include("finance/Finance.jl")
 using .Finance
 
-include("abm_sim/ABM_Sim.jl")
-using .ABM_Sim
+include("econo_sim/Econo_Sim.jl")
+using .Econo_Sim
 
 include("loreco/Loreco.jl")
 using .Loreco
