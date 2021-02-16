@@ -14,24 +14,26 @@ function stock_limits(stock::Stock, bp::Blueprint)
     if bp in keys(stock_limits)
         return stock_limits[bp]
     else
-        return (0, INF)
+        return (0, 0)
     end
 end
 
 stock_limits!(stock::Stock, bp::Blueprint, min_units::Integer, max_units::Integer) = stock.stock_limits[bp] = (min_units, max_units)
 
 min_stock(stock::Stock, bp::Blueprint) = stock_limits(stock, bp)[1]
-min_stock!(stock::Stock, bp::Blueprint, units::Integer) = stock_limits!(stock, bp, units, max_stock(stock, bp))
+min_stock!(stock::Stock, bp::Blueprint, units::Integer) = stock_limits!(stock, bp, units, max(units, max_stock(stock, bp)))
 
 max_stock(stock::Stock, bp::Blueprint) = stock_limits(stock, bp)[2]
-max_stock!(stock::Stock, bp::Blueprint, units::Integer) = stock_limits!(stock, bp, min_stock(stock, bp), units)
+max_stock!(stock::Stock, bp::Blueprint, units::Integer) = stock_limits!(stock, bp, min(min_stock(stock, bp), units), units)
 
-function add_stock!(stock::Stock, products::Union{AbstractSet{E}, AbstractVector{E}}; force::Bool = false) where E <: Entity
+function add_stock!(stock::Stock,
+                products::Union{<:AbstractSet{E}, <:AbstractVector{E}};
+                force::Bool = false) where E <: Entity
     for product in collect(products)
         bp = get_blueprint(product)
 
         if force || current_stock(stock, bp) < max_stock(stock, bp)
-            pop!(products, product)
+            delete_element!(products, product)
             push!(stock.stock, product)
         end
     end
@@ -61,6 +63,7 @@ function retrieve_stock!(stock::Stock, bp::Blueprint, units::Integer)
     return products
 end
 
+has_stock(stock::Stock, bp::Blueprint) = current_stock(stock, bp) > 0
 stocked(stock::Stock, bp::Blueprint) = current_stock(stock, bp) >= min_stock(stock, bp)
 overstocked(stock::Stock, bp::Blueprint) = current_stock(stock, bp) > max_stock(stock, bp)
 

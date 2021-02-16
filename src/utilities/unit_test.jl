@@ -66,3 +66,8 @@ end
     @test p / h == 0.5
     @test h / p == 1
 end
+
+@testset "Delete element" begin
+    a = [1, 2, 3]
+    @test delete_element!(a, 2) == [1, 3]
+end
