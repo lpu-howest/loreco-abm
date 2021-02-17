@@ -27,12 +27,14 @@ Once 5 units are available the check will always return false in this example an
 The number of marginal units.
 """
 function process(marginality::Marginality, units::Int64 = 0)
+    total_units = units
+
     for entry in marginality
         done = false
 
-        while units < entry[1]
+        while total_units < entry[1]
             if rand() <= entry[2]
-                units += 1
+                total_units += 1
             else
                 done = true
                 break
@@ -44,5 +46,5 @@ function process(marginality::Marginality, units::Int64 = 0)
         end
     end
 
-    return units
+    return total_units - units
 end
