@@ -127,7 +127,16 @@ end
     @test b2.transactions[1][5] == "transfer"
 end
 
-@testset "SuMSy demurrage" begin
+@testset "SuMSy demurrage - single" begin
+    balance = Balance()
+    sumsy = SuMSy(2000, 25000, 0.1, 30, seed = 5000)
+    set_guaranteed_income!(sumsy, balance, true)
+    process_sumsy!(sumsy, balance, 0)
+
+    @test sumsy_balance(balance) == 7000
+end
+
+@testset "SuMSy demurrage - tiers" begin
     sumsy = SuMSy(2000, 50000, [(50000, 0.1), (100000, 0.2), (200000, 0.5)], 10)
     balance = Balance()
 
