@@ -81,7 +81,7 @@ function calculate_demurrage(sumsy::SuMSy, balance::Balance, step::Int)
         weighted_balance += (t_step - period_start) * cur_balance
     end
 
-    avg_balance = weighted_balance / period - dem_free(balance)
+    avg_balance = max(weighted_balance / period - dem_free(balance), 0)
 
     demurrage = 0
     dem_tiers = sumsy.dem_tiers
@@ -109,17 +109,18 @@ function process_sumsy!(sumsy::SuMSy, balance::Balance, step::Int)
     demurrage = 0
 
     if mod(step, sumsy.interval) == 0
+        demurrage = calculate_demurrage(sumsy, balance, step)
+
         if has_guaranteed_income(balance)
             if step == 0
                 income += sumsy.seed
+                book_asset!(balance, SUMSY_DEP, sumsy.seed, step, comment = "Seed")
             end
 
             income += sumsy.guaranteed_income
+            book_asset!(balance, SUMSY_DEP, sumsy.guaranteed_income, step, comment = "Guaranteed income")
         end
 
-        demurrage = calculate_demurrage(sumsy, balance, step)
-
-        book_asset!(balance, SUMSY_DEP, income, step, comment = "Guaranteed income")
         book_asset!(balance, SUMSY_DEP, -demurrage, step, comment = "Demurrage")
     end
 
