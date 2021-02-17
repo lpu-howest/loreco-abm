@@ -14,6 +14,19 @@ using ..Econo_Sim
     @test first(m) == (1, 1)
     @test last(m) == (5, 0.1)
     @test 1 <= process(m) <= 5
+
+    m = Marginality([(1, 0.5)])
+    total_units = 0
+    max_want = 0
+
+    for i in 1:1000
+        units = process(m, total_units)
+        max_want = max(units, max_want)
+        total_units = total_units + units
+    end
+
+    @test total_units <= 1
+    @test max_want <= 1
 end
 
 @testset "Needs" begin
