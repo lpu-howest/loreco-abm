@@ -1,3 +1,5 @@
+using DataStructures
+
 using ..Utilities
 
 SUMSY_DEP = BalanceEntry("SuMSy deposit")
@@ -26,7 +28,7 @@ mutable struct SuMSy
         interval::Integer;
         seed::Real = 0) where {T <: Tuple{Real, Real}} = new(guaranteed_income,
                         dem_free,
-                        sort(dem_tiers),
+                        sort(dem_tiers, rev = true),
                         interval,
                         seed)
 end
@@ -52,7 +54,7 @@ Calculates the demurrage due at the current timestamp. This is not restricted to
 function calculate_demurrage(sumsy::SuMSy, balance::Balance, step::Int)
     transactions = balance.transactions
     cur_balance = asset_value(balance, SUMSY_DEP)
-    period = mod(step, sumsy.interval) == 0 ? sumsy.interval : mod(step, sumsy.interval) == 0
+    period = mod(step, sumsy.interval) == 0 ? sumsy.interval : mod(step, sumsy.interval)
     period_start = step - period
     weighted_balance = 0
     i = length(transactions)
@@ -84,12 +86,11 @@ function calculate_demurrage(sumsy::SuMSy, balance::Balance, step::Int)
     avg_balance = max(weighted_balance / period - dem_free(balance), 0)
 
     demurrage = 0
-    dem_tiers = sumsy.dem_tiers
-    lower_bound = 0
 
-    for tier in dem_tiers
-        demurrage += round(min(avg_balance - lower_bound, tier[1] - lower_bound) * tier[2], digits = 2)
-        lower_bound = tier[1]
+    for tier in sumsy.dem_tiers
+        amount = max(0, avg_balance - tier[1])
+        avg_balance = min(avg_balance, tier[1])
+        demurrage += round(amount * tier[2], digits = 2)
     end
 
     return demurrage
