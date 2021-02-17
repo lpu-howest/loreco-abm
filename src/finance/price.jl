@@ -71,7 +71,9 @@ function purchases_available(balance::Balance, price::Price, units::Integer)
     max_available = INF
 
     for entry in keys(price)
-        max_available = min(max_available, round(asset_value(balance, entry) / price[entry], RoundDown))
+        if price[entry] != 0
+            max_available = min(max_available, round(asset_value(balance, entry) / price[entry], RoundDown))
+        end
     end
 
     return min(units, Integer(max_available))
