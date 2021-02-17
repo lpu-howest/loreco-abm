@@ -65,13 +65,13 @@ end
 function purchase!(model, buyer::Actor, bp::Blueprint, units::Integer)
     condition(blueprint) = agent -> has_stock(agent.stock, blueprint)
     seller = random_agent(model, condition(bp))
-    
+
     return isnothing(seller) ? 0 : purchase!(model, buyer, seller, bp, units)
 end
 
 # Behavior functions
 
-function marginal_behavior(actor::Actor, model)
+function marginal_behavior(model, actor::Actor)
     for dict in (actor.posessions, actor.stock.stock)
         for bp in collect(keys(dict))
             for entity in dict[bp]

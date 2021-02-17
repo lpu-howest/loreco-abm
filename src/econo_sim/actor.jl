@@ -8,13 +8,19 @@ global ID_COUNTER = 0
 """
     Actor - agent representing an economic actor.
 
+# Fields
 * id::Int - the id of the agent.
-* types::Symbol - the type of actor.
-* model_behaviors::Vector{Function} - the list of functions which are called during the model_step!.
+* types::Set{Symbol} - the types of the actor. Types are meant to be used in data collection and/or behavior functions.
+* model_behaviors::Vector{Function} - the list of functions which are called by econo_model_step!, which is the default model_step! function.
 * behaviors::Function - the list of behavior functions which is called when the actor is activated.
 * balance::Balance - the balance sheet of the agent.
-* posessions::Entities - the entities in posession of the agent.
+* posessions::Entities - the entities in personal posession of the agent.
+* stock::Stock - the stock held by the agent. The stock is considered to be used for business purposes.
 * producers::Set{Producer} - the production facilities of the agent.
+* prices::D where D <: Dict{<:Blueprint, Price} - the prices of the products sold by the actor.
+* properties::Dict{Symbol, Any} - for internal use.
+
+After creation, ant field can be set on the actor, even those which are not part of the structure. This can come in handy when when specific state needs to be stored with the actor.
 """
 mutable struct Actor <: AbstractAgent
     id::Int64
@@ -25,9 +31,23 @@ mutable struct Actor <: AbstractAgent
     posessions::Entities
     stock::Stock
     producers::Set{Producer}
+    prices::Dict{Blueprint, Price}
     properties::D where {D <: Dict{Symbol, <:Any}}
 end
 
+"""
+    Actor - creation function for a generic actor.
+
+# Parameters
+* id::Int = ID_COUNTER - the id of the agent. When no id is given, the standard sequence of id's is used. Mixing the standard sequence and user defined id's is not advised.
+* type::Union{Symbol, Nothing} = nothing - the types of the actor. Types are meant to be used in data collection and/or behavior functions.
+* model_behavior::Union{Function, Nothing} = nothing - the default function to be called by econo_model_step!, which is the default model_step! function.
+* behavior::Union{Function, Nothing} = nothing - the default behavior function which is called when the actor is activated.
+* balance::Balance = Balance() - the balance sheet of the agent.
+* posessions::Entities = Entities() - the entities in personal posession of the agent.
+* stock::Stock = Stock() - the stock held by the agent. The stock is considered to be used for business purposes.
+* producers::Union{AbstractVector{Producer}, AbstractSet{Producer}} = Set{Producer}() - the production facilities of the agent.
+"""
 function Actor(;id::Integer = ID_COUNTER,
         type::Union{Symbol, Nothing} = nothing,
         model_behavior::Union{Function, Nothing} = nothing,
@@ -36,14 +56,13 @@ function Actor(;id::Integer = ID_COUNTER,
         posessions::Entities = Entities(),
         stock::Stock = Stock(),
         producers::Union{AbstractVector{Producer}, AbstractSet{Producer}} = Set{Producer}(),
-        properties::D = Dict{Symbol, Any}()) where {D <: Dict{Symbol, <:Any}}
-    properties[:prices] = Dict{Blueprint, Price}()
+        prices::D = Dict{Blueprint, Price}()) where {D <: Dict{<: Blueprint, Price}}
     typeset = isnothing(type) ? Set{Symbol}() : Set([type])
     model_behaviors = isnothing(model_behavior) ? Vector{Function}() : Vector([model_behavior])
     behaviors = isnothing(behavior) ? Vector{Function}() : Vector([behavior])
     global ID_COUNTER += 1
 
-    return Actor(id, typeset, model_behaviors, behaviors, balance, posessions, stock, Set(producers), properties)
+    return Actor(id, typeset, model_behaviors, behaviors, balance, posessions, stock, Set(producers), prices, Dict{Symbol, Any}())
 end
 
 function Base.getproperty(actor::Actor, s::Symbol)
@@ -123,7 +142,7 @@ end
 
 function actor_step!(actor, model)
     for behavior in actor.behaviors
-        behavior(actor, model)
+        behavior(model, actor)
     end
 end
 
@@ -134,7 +153,7 @@ end
 
 Resupply stocks as needed.
 """
-function produce_stock!(actor::Actor, model)
+function produce_stock!(model, actor::Actor)
     stock = actor.stock
 
     for producer in actor.producers
