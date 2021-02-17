@@ -8,11 +8,13 @@ using ..Econo_Sim
 using ..Loreco
 
 @testset "Loreco model" begin
+    now = time()
     # Create the Loreco model.
     model = init_loreco_model()
 
-    # Execute a default step
-    econo_step!(model, 60)
+    # Execute 300 default steps
+    econo_step!(model, 300)
+    done = time() - now
 
     sumsy_data = Dict{Symbol, Float64}(CONSUMER => 0, BAKER => 0, TV_MERCHANT => 0, GOVERNANCE => 0)
 
