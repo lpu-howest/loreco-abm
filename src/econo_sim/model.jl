@@ -19,15 +19,11 @@ function econo_model_step!(model)
 
     for actor in allagents(model)
         for behavior in actor.model_behaviors
-            behavior(actor, model)
+            behavior(model, actor)
         end
     end
 end
 
-function econo_step!(model;
-                    actor_step::Function = actor_step!,
-                    model_step::Function = econo_model_step!,
-                    steps::Integer = 1,
-                    agents_first::Bool = false)
-    step!(model, actor_step, model_step, steps, agents_first)
+function econo_step!(model, steps::Integer = 1)
+    step!(model, actor_step!, econo_model_step!, steps, false)
 end
