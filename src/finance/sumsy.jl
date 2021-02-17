@@ -28,7 +28,7 @@ mutable struct SuMSy
         interval::Integer;
         seed::Real = 0) where {T <: Tuple{Real, Real}} = new(guaranteed_income,
                         dem_free,
-                        sort(dem_tiers, rev = true),
+                        complete_tiers(dem_tiers),
                         interval,
                         seed)
 end
@@ -44,6 +44,22 @@ function SuMSy(guaranteed_income::Real,
             interval::Integer;
             seed::Real = 0)
     return SuMSy(guaranteed_income, dem_free, [(0, dem)], interval, seed = seed)
+end
+
+"""
+    Make sure there is at least 1 demurrage tier and that the lowest demurrage tier starts at 0.
+"""
+function complete_tiers(dem_tiers::Vector{T}) where  {T <: Tuple{Real, Real}}
+    dem_tiers = Vector{Tuple{Float64, Percentage}}(dem_tiers)
+    sort!(dem_tiers, rev = true)
+
+    if isempty(dem_tiers)
+        push!(dem_tiers, (0, 0))
+    else
+        dem_tiers[end] = (0, dem_tiers[end][2])
+    end
+
+    return dem_tiers
 end
 
 """
