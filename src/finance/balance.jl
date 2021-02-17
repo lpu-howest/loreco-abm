@@ -199,7 +199,10 @@ function book_asset!(b::Balance,
         book_amount!(entry, b.balance[asset], amount, b.digits)
         # Negative equity is always allowed!
         book_amount!(EQUITY, b.balance[liability], amount, b.digits)
-        push!(b.transactions, (timestamp, asset, entry, amount, comment))
+        if amount != 0
+            push!(b.transactions, (timestamp, asset, entry, amount, comment))
+        end
+
         return true
     else
         return false
@@ -226,7 +229,10 @@ function book_liability!(b::Balance,
         book_amount!(entry, b.balance[liability], amount, b.digits)
         # Negative equity is always allowed!
         book_amount!(EQUITY, b.balance[liability], -amount, b.digits)
-        push!(b.transactions, (timestamp, liability, entry, amount, comment))
+        if amount != 0
+            push!(b.transactions, (timestamp, liability, entry, amount, comment))
+        end
+
         return true
     else
         return false
