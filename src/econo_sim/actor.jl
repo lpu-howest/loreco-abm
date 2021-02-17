@@ -133,8 +133,11 @@ function purchase!(model, buyer::Actor, seller::Actor, bp::Blueprint, units::Int
         units = 0
     else
         units = min(current_stock(seller.stock, bp), purchases_available(buyer.balance, price, units))
-        buyer.posessions[bp] = union!(buyer.posessions[bp], retrieve_stock!(seller.stock, bp, units))
-        pay!(buyer.balance, seller.balance, price * units, model.step, comment = bp.name)
+
+        if units > 0
+            buyer.posessions[bp] = union!(buyer.posessions[bp], retrieve_stock!(seller.stock, bp, units))
+            pay!(buyer.balance, seller.balance, price * units, model.step, comment = bp.name)
+        end
     end
 
     return units
