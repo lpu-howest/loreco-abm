@@ -134,10 +134,17 @@ end
     process_sumsy!(sumsy, balance, 0)
 
     @test sumsy_balance(balance) == 7000
+
+    book_asset!(balance, SUMSY_DEP, 93000)
+    @test calculate_demurrage(sumsy, balance, 30) == 7500
+
+    # Test correct calculation of average weighted balance.
+    book_asset!(balance, SUMSY_DEP, 10000, 15)
+    @test calculate_demurrage(sumsy, balance, 30) == 8000
 end
 
 @testset "SuMSy demurrage - tiers" begin
-    sumsy = SuMSy(2000, 50000, [(50000, 0.1), (100000, 0.2), (200000, 0.5)], 10)
+    sumsy = SuMSy(2000, 50000, [(0, 0.1), (50000, 0.2), (150000, 0.5)], 10)
     balance = Balance()
 
     @test !has_guaranteed_income(balance)
@@ -148,7 +155,7 @@ end
 
     @test has_guaranteed_income(balance)
     @test dem_free(balance) == 50000
-    @test calculate_demurrage(sumsy, balance, 10) == 20000
+    @test calculate_demurrage(sumsy, balance, 10) == 17000
 end
 
 @testset "Transfer queues" begin
